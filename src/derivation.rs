@@ -1,1 +1,1 @@
-pub struct DerivationTestVector {}
+pub struct DerivationFixture {}
