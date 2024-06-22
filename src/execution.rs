@@ -52,15 +52,10 @@ pub struct ExecutionReceipt {
 
 #[cfg(test)]
 mod tests {
-    use alloy::{
-        primitives::{Address, Bloom, B256},
-        rpc::types::ReceiptWithBloom,
-    };
-    use op_alloy_consensus::OpReceiptEnvelope;
-    use serde_json::Value;
 
     use super::ExecutionEnvironment;
-    use crate::execution::{ExecutionFixture, ExecutionReceipt, ExecutionResult};
+    use crate::execution::ExecutionResult;
+    use serde_json::Value;
 
     #[test]
     fn test_serialize_execution_environment() -> eyre::Result<()> {
