@@ -1,0 +1,13 @@
+[package]
+name = "op-test-gen"
+description = "Utility for easily generating test vectors"
+
+license = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+
+[dependencies]
+op-test-vectors = { workspace = true }

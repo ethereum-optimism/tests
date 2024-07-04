@@ -1,0 +1,20 @@
+[package]
+name = "op-test-vectors"
+description = "Types for test vectors"
+
+license = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+
+[dependencies]
+op-alloy-rpc-types = { workspace = true }
+op-alloy-consensus = { workspace = true }
+alloy = { workspace = true }
+serde = { workspace = true }
+
+[dev-dependencies]
+color-eyre = { workspace = true }
+serde_json = { workspace = true }
