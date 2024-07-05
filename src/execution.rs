@@ -5,7 +5,7 @@ use alloy::rpc::types::trace::geth::AccountState;
 use op_alloy_consensus::{OpReceiptEnvelope, OpTypedTransaction};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 pub struct ExecutionFixture {
     pub env: ExecutionEnvironment,
     pub alloc: HashMap<Address, AccountState>,
@@ -13,7 +13,7 @@ pub struct ExecutionFixture {
     pub result: ExecutionResult,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ExecutionEnvironment {
     pub current_coinbase: Address,
@@ -26,7 +26,7 @@ pub struct ExecutionEnvironment {
     pub block_hashes: Option<HashMap<U256, B256>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ExecutionResult {
     pub state_root: B256,
