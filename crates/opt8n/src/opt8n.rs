@@ -1,5 +1,8 @@
 use anvil::{eth::EthApi, NodeConfig, NodeHandle};
+use futures::StreamExt;
 use op_test_vectors::execution::ExecutionFixture;
+
+use crate::cmd::Opt8nCommand;
 
 pub struct Opt8n {
     pub eth_api: EthApi,
@@ -33,7 +36,7 @@ impl Opt8n {
                 new_block = new_blocks.next() => {
                     if let Some(new_block) = new_block {
                         if let Some(block) = self.eth_api.backend.get_block_by_hash(new_block.hash) {
-                            self.execution_fixture.transactions.extend(block.transactions);
+                            self.execution_fixture.transactions.extend(block.transactions.iter());
                         }
 
                     }

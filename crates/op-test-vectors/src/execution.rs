@@ -56,6 +56,7 @@ mod tests {
 
     use super::ExecutionEnvironment;
     use crate::execution::ExecutionResult;
+    use color_eyre::eyre;
     use serde_json::Value;
 
     #[test]
@@ -74,7 +75,7 @@ mod tests {
          }
         "#;
 
-        let env = serde_json::from_str::<ExecutionEnvironment>(&expected_env)?;
+        let env = serde_json::from_str::<ExecutionEnvironment>(expected_env)?;
         let serialized_env = serde_json::to_string(&env)?;
 
         assert_eq!(
