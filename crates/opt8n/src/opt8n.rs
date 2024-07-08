@@ -18,9 +18,6 @@ impl Opt8n {
 
     pub async fn listen(&self) {
         let new_blocks = self.eth_api.backend.new_block_notifications();
-
-        let x = new_blocks.next().await;
-
         loop {
             tokio::select! {
                 command = self.receive_command() => {

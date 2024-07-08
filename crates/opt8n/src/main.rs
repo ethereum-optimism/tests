@@ -16,6 +16,5 @@ async fn main() -> eyre::Result<()> {
     let args = Args::parse();
     let opt8n = Opt8n::new(None).await;
     opt8n.listen().await;
-
     Ok(())
 }
