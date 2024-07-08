@@ -1,19 +1,2 @@
-[package]
-name = "op-test-vectors"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-op-alloy-rpc-types = { git = "https://github.com/alloy-rs/op-alloy.git", rev = "97cca5624dc3db8631ff7866e091876fd2fedd25" }
-op-alloy-consensus = { git = "https://github.com/alloy-rs/op-alloy.git", rev = "97cca5624dc3db8631ff7866e091876fd2fedd25" }
-alloy = { version = "0.1", features = ["rpc", "rpc-types-trace"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0.117"
-eyre = "0.6"
-tokio = { version = "1.38.0", features = ["sync", "macros", "rt-multi-thread"] }
-clap = { version = "4.5", features = ["derive", "env"] }
-anvil = { git = "https://github.com/foundry-rs/foundry.git", rev = "1bac1b3d79243cea755800bf396c30a3d74741bf" }
-
-[[bin]]
-name = "opt8n"
-path = "bin/op_t8n/op_t8n.rs"
+[workspace]
+members = ["crates/op-test-vectors", "crates/opt8n"]
