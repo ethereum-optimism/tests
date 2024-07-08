@@ -4,14 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-op-test-vectors = { path = "../op-test-vectors" }
-op-alloy-rpc-types = "0.1.2"
-op-alloy-consensus = "0.1.2"
-alloy = { version = "0.1", features = ["rpc", "rpc-types-trace"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0.117"
-eyre = "0.6"
-tokio = { version = "1.38.0", features = ["sync", "macros", "rt-multi-thread"] }
-clap = { version = "4.5", features = ["derive", "env"] }
-anvil = { git = "https://github.com/foundry-rs/foundry.git", rev = "1bac1b3d79243cea755800bf396c30a3d74741bf" }
-futures = "0.3.30"
+op-test-vectors = { workspace = true }
+clap = { workspace = true }
+tokio = { workspace = true }
+color-eyre = { workspace = true }
+anvil = { workspace = true }
+forge-script = { workspace = true }

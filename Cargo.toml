@@ -1,2 +1,39 @@
 [workspace]
 members = ["crates/op-test-vectors", "crates/opt8n"]
+resolver = "2"
+
+[workspace.package]
+version = "0.0.1"
+authors = ["Eric Woolsey<ewoolsey@ualberta.ca>"]
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/ethereum-optimism/op-test-vectors"
+homepage = "https://github.com/ethereum-optimism/op-test-vectors"
+exclude = ["**/target", "benches/", "tests"]
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+color-eyre = "0.6"
+lazy_static = "1"
+tracing = "0.1"
+tokio = { version = "1", features = ["full"] }
+clap = { version = "4", features = ["derive"] }
+
+# Foundry
+# TODO anvil doesn't compile with `default-features = false`
+anvil = { git = "https://github.com/foundry-rs/foundry", default-features = true }
+# forge = { git = "https://github.com/foundry-rs/foundry" }
+forge-script = { git = "https://github.com/foundry-rs/foundry" }
+
+#Ethereum
+reth-evm-optimism = { git = "https://github.com/paradigmxyz/reth", branch = "main", features = [
+    "optimism",
+] }
+op-alloy-rpc-types = { git = "https://github.com/alloy-rs/op-alloy.git", rev = "97cca5624dc3db8631ff7866e091876fd2fedd25" }
+op-alloy-consensus = { git = "https://github.com/alloy-rs/op-alloy.git", rev = "97cca5624dc3db8631ff7866e091876fd2fedd25" }
+alloy = { version = "0.1", features = ["rpc", "rpc-types-trace"] }
+
+# Internal
+op-test-vectors = { path = "crates/op-test-vectors" }
