@@ -1,14 +1,20 @@
 [package]
 name = "op-test-vectors"
-version = "0.1.0"
-edition = "2021"
+description = "Types for test vectors"
+
+license = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
 
 [dependencies]
-op-alloy-rpc-types = "0.1.2"
-op-alloy-consensus = "0.1.2"
-alloy = { version = "0.1", features = ["rpc", "rpc-types-trace"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0.117"
+op-alloy-rpc-types = { workspace = true }
+op-alloy-consensus = { workspace = true }
+alloy = { workspace = true }
+serde = { workspace = true }
 
 [dev-dependencies]
-eyre = "0.6.12"
+color-eyre = { workspace = true }
+serde_json = { workspace = true }
