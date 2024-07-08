@@ -1,3 +1,6 @@
+use anvil::{eth::EthApi, NodeConfig, NodeHandle};
+use op_test_vectors::execution::ExecutionFixture;
+
 pub struct Opt8n {
     pub eth_api: EthApi,
     pub node_handle: NodeHandle,
@@ -7,7 +10,7 @@ pub struct Opt8n {
 impl Opt8n {
     pub async fn new(node_config: Option<NodeConfig>) -> Self {
         let node_config = node_config.unwrap_or_default().with_optimism(true);
-        let (eth_api, node_handle) = spawn(node_config).await;
+        let (eth_api, node_handle) = anvil::spawn(node_config).await;
 
         Self {
             eth_api,
@@ -40,7 +43,7 @@ impl Opt8n {
         }
     }
 
-    pub async fn receive_command(&self) -> Opt8nCommand {
+    pub async fn receive_command(&self) -> Op {
         todo!()
     }
 
