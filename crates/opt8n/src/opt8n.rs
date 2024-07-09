@@ -1,6 +1,6 @@
 use anvil::{eth::EthApi, NodeConfig, NodeHandle};
 use futures::StreamExt;
-use op_test_vectors::execution::ExecutionFixture;
+use op_test_vectors::execution::{ExecutionFixture, ExecutionResult};
 
 use crate::cmd::Opt8nCommand;
 
@@ -23,6 +23,7 @@ impl Opt8n {
     }
 
     pub async fn listen(&mut self) {
+        // TODO: I might ahve to update this to use alloy if the relevent methods are not available
         let mut new_blocks = self.eth_api.backend.new_block_notifications();
 
         loop {
@@ -39,7 +40,21 @@ impl Opt8n {
                         if let Some(block) = self.eth_api.backend.get_block_by_hash(new_block.hash) {
                             let transactions = block.transactions.into_iter().map(|tx| tx.transaction).collect::<Vec<_>>();
                             self.execution_fixture.transactions.extend(transactions);
+
+                            let block_header = block.header;
+                            let execution_result = ExecutionResult{
+                                state_root: block_header.state_root,
+                                tx_root: block_header.transactions_root,
+                                receipt_root: block_header.receipts_root,
+                                logs_hash: todo!("logs_hash"),
+                                logs_bloom: block_header.logs_bloom,
+                                receipts:vec![],
+                            };
                         }
+
+
+
+
 
                     }
 
