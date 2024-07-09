@@ -11,4 +11,3 @@ tokio = { workspace = true }
 futures = { workspace = true }
 color-eyre = { workspace = true }
 anvil = { workspace = true }
-forge-script = { workspace = true }
