@@ -23,7 +23,8 @@ impl Opt8n {
     }
 
     pub async fn listen(&mut self) {
-        let new_blocks = self.eth_api.backend.new_block_notifications();
+        let mut new_blocks = self.eth_api.backend.new_block_notifications();
+
         loop {
             tokio::select! {
                 command = self.receive_command() => {
@@ -36,7 +37,8 @@ impl Opt8n {
                 new_block = new_blocks.next() => {
                     if let Some(new_block) = new_block {
                         if let Some(block) = self.eth_api.backend.get_block_by_hash(new_block.hash) {
-                            self.execution_fixture.transactions.extend(block.transactions.iter());
+                            let transactions = block.transactions.into_iter().map(|tx| tx.transaction).collect::<Vec<_>>();
+                            self.execution_fixture.transactions.extend(transactions);
                         }
 
                     }
@@ -46,7 +48,7 @@ impl Opt8n {
         }
     }
 
-    pub async fn receive_command(&self) -> Op {
+    pub async fn receive_command(&self) -> Opt8nCommand {
         todo!()
     }
 

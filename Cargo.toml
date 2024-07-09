@@ -22,19 +22,12 @@ tokio = { version = "1", features = ["full"] }
 futures = "0.3"
 clap = { version = "4", features = ["derive"] }
 
-# Foundry
-# TODO anvil doesn't compile with `default-features = false`
-anvil = { git = "https://github.com/foundry-rs/foundry", default-features = true }
-# forge = { git = "https://github.com/foundry-rs/foundry" }
-forge-script = { git = "https://github.com/foundry-rs/foundry" }
-
-#Ethereum
-reth-evm-optimism = { git = "https://github.com/paradigmxyz/reth", branch = "main", features = [
-    "optimism",
-] }
-op-alloy-rpc-types = { git = "https://github.com/alloy-rs/op-alloy.git", rev = "97cca5624dc3db8631ff7866e091876fd2fedd25" }
-op-alloy-consensus = { git = "https://github.com/alloy-rs/op-alloy.git", rev = "97cca5624dc3db8631ff7866e091876fd2fedd25" }
-alloy = { version = "0.1", features = ["rpc", "rpc-types-trace"] }
+# Eth
+op-alloy-rpc-types = "0.1.2"
+op-alloy-consensus = "0.1.2"
+alloy = { version = "0.1.4", features = ["rpc", "rpc-types-trace"] }
+anvil = { git = "https://github.com/foundry-rs/foundry", default-features = true, rev = "7c4482fc9541f11b57575e2d8bf7bd190b61bda6" }
+anvil-core = { git = "https://github.com/foundry-rs/foundry", default-features = true, rev = "7c4482fc9541f11b57575e2d8bf7bd190b61bda6" }
 
 # Internal
 op-test-vectors = { path = "crates/op-test-vectors" }

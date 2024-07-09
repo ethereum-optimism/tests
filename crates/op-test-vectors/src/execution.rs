@@ -2,7 +2,8 @@ use std::collections::HashMap;
 
 use alloy::primitives::{Address, Bloom, B256, U256};
 use alloy::rpc::types::trace::geth::AccountState;
-use op_alloy_consensus::{OpReceiptEnvelope, OpTypedTransaction};
+use anvil_core::eth::transaction::TypedTransaction;
+use op_alloy_consensus::OpReceiptEnvelope;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Default)]
@@ -10,7 +11,7 @@ pub struct ExecutionFixture {
     pub env: ExecutionEnvironment,
     pub alloc: HashMap<Address, AccountState>,
     #[serde(rename = "txs")]
-    pub transactions: Vec<OpTypedTransaction>,
+    pub transactions: Vec<TypedTransaction>,
     pub result: ExecutionResult,
 }
 
