@@ -27,6 +27,7 @@ op-alloy-rpc-types = "0.1.2"
 op-alloy-consensus = "0.1.2"
 alloy = { version = "0.1.4", features = ["rpc", "rpc-types-trace"] }
 anvil = { git = "https://github.com/foundry-rs/foundry", default-features = true, rev = "7c4482fc9541f11b57575e2d8bf7bd190b61bda6" }
+anvil-core = { git = "https://github.com/foundry-rs/foundry", default-features = true, rev = "7c4482fc9541f11b57575e2d8bf7bd190b61bda6" }
 
 # Internal
 op-test-vectors = { path = "crates/op-test-vectors" }
