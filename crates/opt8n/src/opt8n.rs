@@ -36,7 +36,8 @@ impl Opt8n {
                 new_block = new_blocks.next() => {
                     if let Some(new_block) = new_block {
                         if let Some(block) = self.eth_api.backend.get_block_by_hash(new_block.hash) {
-                            self.execution_fixture.transactions.extend(block.transactions.iter());
+                            let transactions = block.transactions.iter().map(|tx| tx.transaction).collect::<Vec<_>>();
+                            self.execution_fixture.transactions.extend(transactions);
                         }
 
                     }
@@ -46,7 +47,7 @@ impl Opt8n {
         }
     }
 
-    pub async fn receive_command(&self) -> Op {
+    pub async fn receive_command(&self) -> Opt8nCommand {
         todo!()
     }
 
