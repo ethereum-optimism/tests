@@ -1,6 +1,6 @@
 use anvil::{eth::EthApi, NodeConfig, NodeHandle};
 use futures::StreamExt;
-use op_test_vectors::execution::{ExecutionFixture, ExecutionResult};
+use op_test_vectors::execution::{ExecutionFixture, ExecutionReceipt, ExecutionResult};
 
 use crate::cmd::Opt8nCommand;
 
@@ -39,6 +39,10 @@ impl Opt8n {
                     if let Some(new_block) = new_block {
                         if let Some(block) = self.eth_api.backend.get_block_by_hash(new_block.hash) {
                             let transactions = block.transactions.into_iter().map(|tx| tx.transaction).collect::<Vec<_>>();
+
+                            // TODO: get receipts
+                            let receipts: Vec<ExecutionReceipt> = vec![];
+
                             self.execution_fixture.transactions.extend(transactions);
 
                             let block_header = block.header;
@@ -48,8 +52,10 @@ impl Opt8n {
                                 receipt_root: block_header.receipts_root,
                                 logs_hash: todo!("logs_hash"),
                                 logs_bloom: block_header.logs_bloom,
-                                receipts:vec![],
+                                receipts,
                             };
+
+                            self.execution_fixture.result = execution_result;
                         }
 
 
