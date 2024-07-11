@@ -16,8 +16,7 @@ pub struct Opt8n {
 }
 
 impl Opt8n {
-    pub async fn new(node_config: Option<NodeConfig>) -> Self {
-        let node_config = node_config.unwrap_or_default().with_optimism(true);
+    pub async fn new(node_config: NodeConfig) -> Self {
         let (eth_api, node_handle) = anvil::spawn(node_config).await;
 
         Self {

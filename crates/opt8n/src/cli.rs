@@ -1,20 +1,25 @@
 use crate::opt8n::Opt8n;
-use clap::{Parser, Subcommand};
+use anvil::cmd::NodeArgs;
+use clap::{Command, CommandFactory, Parser, Subcommand};
 use color_eyre::eyre;
 use forge_script::ScriptArgs;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
+use tracing::trace;
 
 #[derive(Parser, Clone, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Cli {
     #[command(subcommand)]
-    pub command: Command,
+    pub command: Commands,
+
+    #[command(flatten)]
+    pub node_args: NodeArgs,
 }
 
 #[derive(Subcommand, Clone, Debug)]
 #[clap(rename_all = "kebab_case", infer_subcommands = true)]
-pub enum Command {
+pub enum Commands {
     /// Uses a forge script to generate a test vector
     #[command(visible_alias = "s")]
     Script {
@@ -28,19 +33,35 @@ pub enum Command {
 }
 
 impl Cli {
-    pub async fn run(&self) -> eyre::Result<()> {
+    pub async fn run(self) -> eyre::Result<()> {
+        let node_config = self.node_args.into_node_config();
+        let mut opt8n = Opt8n::new(node_config).await;
+
         match &self.command {
-            Command::Script { script_args } => {
+            Commands::Script { script_args } => {
                 println!("Running script: {}", script_args.path);
                 Ok(())
             }
-            Command::Repl { .. } => {
+            Commands::Repl { .. } => {
                 println!("Starting REPL");
-                let mut opt8n = Opt8n::new(None).await;
                 opt8n.listen().await;
                 Ok(())
             }
         }
+    }
+
+    // Modify the cli with sensible defaults
+    pub fn default_command() -> Command {
+        Cli::command_for_update().mut_args(|mut arg| {
+            match arg.get_id().as_str() {
+                "optimism" => {
+                    trace!("Setting node-args as optional");
+                    arg = arg.default_value("true");
+                }
+                _ => {}
+            }
+            arg
+        })
     }
 }
 
@@ -54,7 +75,7 @@ pub enum Opt8nCommand {
     },
     #[command(visible_alias = "c")]
     Cast {
-        #[arg(index = 1, num_args = 1..)]
+        #[arg(index = 1, allow_hyphen_values = true)]
         args: Vec<String>,
     },
     #[command(visible_alias = "e")]
