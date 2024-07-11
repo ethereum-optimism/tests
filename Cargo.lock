@@ -1037,6 +1037,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-recursion"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3b43422f69d8ff38f95f1b2bb76517c91589a924d1559a0e935d7c8ce0274c11"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.70",
+]
+
+[[package]]
 name = "async-stream"
 version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2518,6 +2529,80 @@ dependencies = [
  "solang-parser",
  "thiserror",
  "tracing",
+]
+
+[[package]]
+name = "forge-script"
+version = "0.2.0"
+source = "git+https://github.com/foundry-rs/foundry?rev=7c4482fc9541f11b57575e2d8bf7bd190b61bda6#7c4482fc9541f11b57575e2d8bf7bd190b61bda6"
+dependencies = [
+ "alloy-chains",
+ "alloy-dyn-abi",
+ "alloy-eips",
+ "alloy-json-abi",
+ "alloy-network",
+ "alloy-primitives",
+ "alloy-provider",
+ "alloy-rpc-types",
+ "alloy-serde",
+ "alloy-signer",
+ "alloy-transport",
+ "async-recursion",
+ "clap",
+ "dialoguer",
+ "dunce",
+ "eyre",
+ "forge-verify",
+ "foundry-cheatcodes",
+ "foundry-cli",
+ "foundry-common",
+ "foundry-compilers",
+ "foundry-config",
+ "foundry-debugger",
+ "foundry-evm",
+ "foundry-linking",
+ "foundry-wallets",
+ "futures",
+ "indicatif",
+ "itertools 0.13.0",
+ "parking_lot",
+ "revm-inspectors",
+ "semver 1.0.23",
+ "serde",
+ "serde_json",
+ "tracing",
+ "yansi",
+]
+
+[[package]]
+name = "forge-verify"
+version = "0.2.0"
+source = "git+https://github.com/foundry-rs/foundry?rev=7c4482fc9541f11b57575e2d8bf7bd190b61bda6#7c4482fc9541f11b57575e2d8bf7bd190b61bda6"
+dependencies = [
+ "alloy-json-abi",
+ "alloy-primitives",
+ "alloy-provider",
+ "alloy-rpc-types",
+ "async-trait",
+ "clap",
+ "eyre",
+ "foundry-block-explorers",
+ "foundry-cli",
+ "foundry-common",
+ "foundry-compilers",
+ "foundry-config",
+ "foundry-evm",
+ "futures",
+ "itertools 0.13.0",
+ "once_cell",
+ "regex",
+ "reqwest",
+ "revm-primitives",
+ "semver 1.0.23",
+ "serde",
+ "serde_json",
+ "tracing",
+ "yansi",
 ]
 
 [[package]]
@@ -4288,6 +4373,7 @@ dependencies = [
  "anvil",
  "clap",
  "color-eyre",
+ "forge-script",
  "futures",
  "op-test-vectors",
  "serde",

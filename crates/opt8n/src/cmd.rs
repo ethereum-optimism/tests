@@ -14,7 +14,7 @@ impl FromStr for Opt8nCommand {
     type Err = eyre::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().trim().as_ref() {
+        match s.to_lowercase().trim() {
             "exit" => Ok(Self::Exit),
             _ => Err(eyre::eyre!("Unrecognized command")),
         }
