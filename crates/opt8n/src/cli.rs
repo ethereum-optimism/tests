@@ -2,6 +2,7 @@ use crate::opt8n::Opt8n;
 use clap::{Parser, Subcommand};
 use color_eyre::eyre;
 use forge_script::ScriptArgs;
+use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
 #[derive(Parser, Clone, Debug)]
@@ -41,4 +42,21 @@ impl Cli {
             }
         }
     }
+}
+
+#[derive(Parser, Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[clap(rename_all = "kebab_case", infer_subcommands = true, multicall = true)]
+pub enum Opt8nCommand {
+    #[command(visible_alias = "a")]
+    Anvil {
+        #[arg(index = 1, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    #[command(visible_alias = "c")]
+    Cast {
+        #[arg(index = 1, num_args = 1..)]
+        args: Vec<String>,
+    },
+    #[command(visible_alias = "e")]
+    Exit,
 }

@@ -7,8 +7,10 @@ edition = "2021"
 serde = { version = "1.0", features = ["derive"] }
 op-test-vectors = { workspace = true }
 clap = { workspace = true }
+shellwords = { workspace = true }
 tokio = { workspace = true }
 futures = { workspace = true }
 color-eyre = { workspace = true }
 anvil = { workspace = true }
+cast = { workspace = true }
 forge-script = { workspace = true }

@@ -1,8 +1,13 @@
+use anvil::cmd::NodeArgs;
 use anvil::{eth::EthApi, NodeConfig, NodeHandle};
+use clap::{CommandFactory, FromArgMatches};
+use color_eyre::eyre::Result;
 use futures::StreamExt;
 use op_test_vectors::execution::{ExecutionFixture, ExecutionReceipt, ExecutionResult};
+use tokio::io::AsyncBufReadExt;
+use tokio::io::BufReader;
 
-use crate::cmd::Opt8nCommand;
+use crate::cli::Opt8nCommand;
 
 pub struct Opt8n {
     pub eth_api: EthApi,
@@ -29,10 +34,11 @@ impl Opt8n {
         loop {
             tokio::select! {
                 command = self.receive_command() => {
-                    if command == Opt8nCommand::Exit {
-                        break;
+                    match command {
+                        Ok(Opt8nCommand::Exit) => break,
+                        Ok(command) => self.execute(command).await.unwrap(),
+                        Err(e) => eprintln!("Error: {:?}", e),
                     }
-                    self.execute(command);
                 }
 
                 new_block = new_blocks.next() => {
@@ -57,26 +63,37 @@ impl Opt8n {
 
                             self.execution_fixture.result = execution_result;
                         }
-
-
-
-
-
                     }
-
                 }
             }
         }
     }
 
-    pub async fn receive_command(&self) -> Opt8nCommand {
-        todo!()
+    pub async fn receive_command(&self) -> Result<Opt8nCommand> {
+        let line = BufReader::new(tokio::io::stdin())
+            .lines()
+            .next_line()
+            .await?
+            .unwrap();
+        let words = shellwords::split(&line)?;
+        println!("Received command: {:?}", words);
+        let matches = Opt8nCommand::command().try_get_matches_from(words)?;
+        Ok(Opt8nCommand::from_arg_matches(&matches)?)
     }
 
-    pub fn execute(&self, command: Opt8nCommand) {
+    pub async fn execute(&self, command: Opt8nCommand) -> Result<()> {
         match command {
-            Opt8nCommand::Cast(_) => todo!(),
-            _ => unreachable!("Unrecognized command"),
+            Opt8nCommand::Anvil { mut args } => {
+                args.insert(0, "anvil".to_string());
+                println!("Args: {:?}", args);
+                let command = NodeArgs::command_for_update();
+                let matches = command.try_get_matches_from(args)?;
+                let node_args = NodeArgs::from_arg_matches(&matches)?;
+                node_args.run().await?;
+                Ok(())
+            }
+            Opt8nCommand::Cast { .. } => Ok(()),
+            Opt8nCommand::Exit => unreachable!(),
         }
     }
 }

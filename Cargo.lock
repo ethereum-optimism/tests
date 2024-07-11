@@ -1602,6 +1602,61 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "df8670b8c7b9dae1793364eafadf7239c40d669904660c5960d74cfd80b46a53"
 
 [[package]]
+name = "cast"
+version = "0.2.0"
+source = "git+https://github.com/foundry-rs/foundry?rev=7c4482fc9541f11b57575e2d8bf7bd190b61bda6#7c4482fc9541f11b57575e2d8bf7bd190b61bda6"
+dependencies = [
+ "alloy-chains",
+ "alloy-consensus",
+ "alloy-contract",
+ "alloy-dyn-abi",
+ "alloy-json-abi",
+ "alloy-json-rpc",
+ "alloy-network",
+ "alloy-primitives",
+ "alloy-provider",
+ "alloy-rlp",
+ "alloy-rpc-types",
+ "alloy-serde",
+ "alloy-signer",
+ "alloy-signer-local",
+ "alloy-sol-types",
+ "alloy-transport",
+ "chrono",
+ "clap",
+ "clap_complete",
+ "clap_complete_fig",
+ "comfy-table",
+ "dunce",
+ "evm-disassembler",
+ "evmole",
+ "eyre",
+ "foundry-block-explorers",
+ "foundry-cli",
+ "foundry-common",
+ "foundry-compilers",
+ "foundry-config",
+ "foundry-evm",
+ "foundry-wallets",
+ "futures",
+ "indicatif",
+ "itertools 0.13.0",
+ "rand",
+ "rayon",
+ "regex",
+ "rpassword",
+ "semver 1.0.23",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tikv-jemallocator",
+ "tokio",
+ "tracing",
+ "vergen",
+ "yansi",
+]
+
+[[package]]
 name = "castaway"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2404,6 +2459,25 @@ dependencies = [
  "ethereum-types",
  "itertools 0.10.5",
  "smallvec",
+]
+
+[[package]]
+name = "evm-disassembler"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ded685d9f07315ff689ba56e7d84e6f1e782db19b531a46c34061a733bba7258"
+dependencies = [
+ "eyre",
+ "hex",
+]
+
+[[package]]
+name = "evmole"
+version = "0.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ce047d502545e3a726948bb8a532b8ea1446238f829e01448c802b2f10edbe70"
+dependencies = [
+ "ruint",
 ]
 
 [[package]]
@@ -4371,12 +4445,14 @@ name = "opt8n"
 version = "0.1.0"
 dependencies = [
  "anvil",
+ "cast",
  "clap",
  "color-eyre",
  "forge-script",
  "futures",
  "op-test-vectors",
  "serde",
+ "shellwords",
  "tokio",
 ]
 
@@ -5744,6 +5820,16 @@ name = "shell-words"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "24188a676b6ae68c3b2cb3a01be17fbf7240ce009799bb56d5b1409051e78fde"
+
+[[package]]
+name = "shellwords"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "89e515aa4699a88148ed5ef96413ceef0048ce95b43fbc955a33bde0a70fcae6"
+dependencies = [
+ "lazy_static",
+ "regex",
+]
 
 [[package]]
 name = "signal-hook"

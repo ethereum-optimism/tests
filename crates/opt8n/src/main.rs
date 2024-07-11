@@ -1,5 +1,4 @@
 pub mod cli;
-pub mod cmd;
 pub mod opt8n;
 
 use clap::Parser;
