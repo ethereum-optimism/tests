@@ -37,17 +37,17 @@ impl Cli {
         let node_config = self.node_args.into_node_config();
         let mut opt8n = Opt8n::new(node_config).await;
 
-        match &self.command {
+        match self.command {
             Commands::Script { script_args } => {
                 println!("Running script: {}", script_args.path);
-                Ok(())
+                script_args.run_script().await?;
             }
             Commands::Repl { .. } => {
                 println!("Starting REPL");
                 opt8n.listen().await;
-                Ok(())
             }
         }
+        Ok(())
     }
 
     // Modify the cli with sensible defaults

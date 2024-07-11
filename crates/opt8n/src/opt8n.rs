@@ -89,10 +89,10 @@ impl Opt8n {
                 let matches = command.try_get_matches_from(args)?;
                 let node_args = NodeArgs::from_arg_matches(&matches)?;
                 node_args.run().await?;
-                Ok(())
             }
-            Opt8nCommand::Cast { .. } => Ok(()),
+            Opt8nCommand::Cast { .. } => {}
             Opt8nCommand::Exit => unreachable!(),
         }
+        Ok(())
     }
 }
