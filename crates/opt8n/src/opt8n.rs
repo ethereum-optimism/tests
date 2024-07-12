@@ -1,10 +1,18 @@
+use std::sync::Arc;
+
 use crate::cmd::Opt8nCommand;
 use alloy::rpc::types::{
     anvil::Forking,
     trace::geth::{GethDebugTracingOptions, GethTrace, PreStateConfig, PreStateFrame},
 };
-use anvil::{eth::EthApi, NodeConfig, NodeHandle};
-use anvil_core::eth::transaction::TypedTransaction;
+use anvil::{
+    eth::{
+        pool::transactions::{PoolTransaction, TransactionPriority},
+        EthApi,
+    },
+    NodeConfig, NodeHandle,
+};
+use anvil_core::eth::transaction::{PendingTransaction, TypedTransaction};
 use futures::StreamExt;
 use op_test_vectors::execution::{ExecutionFixture, ExecutionReceipt, ExecutionResult};
 
@@ -29,7 +37,7 @@ impl Opt8n {
     }
 
     pub async fn listen(&mut self) {
-        // TODO: I might ahve to update this to use alloy if the relevent methods are not available
+        // TODO: I might have to update this to use alloy if the relevent methods are not available
         let mut new_blocks = self.eth_api.backend.new_block_notifications();
         loop {
             tokio::select! {
@@ -38,22 +46,19 @@ impl Opt8n {
                     if command == Opt8nCommand::Exit {
                         // Reset the fork
                         let _ = self.eth_api.backend.reset_fork(self.fork.clone()).await;
-                        // TODO Mine all transactions in the execution fixture in aggregate
-                        // And populate the execution fixture with by fetching the block by block number
-                        // break;
-                    }
-                    self.execute(command);
-                }
+                        let pool_txs = self.execution_fixture.transactions.iter().cloned().map(|tx| {
+                            Arc::new(PoolTransaction {
+                                pending_transaction: PendingTransaction::new(tx).expect("Failed to create pending transaction"),
+                                requires: vec![],
+                                provides: vec![],
+                                priority: TransactionPriority(1) // TODO: revisit these fields
+                            })
+                        }).collect::<Vec<Arc<_>>>();
 
-                new_block = new_blocks.next() => {
-                    if let Some(new_block) = new_block {
-                        if let Some(block) = self.eth_api.backend.get_block_by_hash(new_block.hash) {
-                            let transactions = block.transactions.into_iter().map(|tx| tx.transaction).collect::<Vec<_>>();
-                            self.update_alloc(&transactions).await;
-
+                        let block_outcome = self.eth_api.backend.mine_block(pool_txs).await;
+                        if let Some(block) =self.eth_api.backend.get_block(block_outcome.block_number) {
                             // TODO: get receipts
                             let receipts: Vec<ExecutionReceipt> = vec![];
-                            self.execution_fixture.transactions.extend(transactions);
                             let block_header = block.header;
                             let execution_result = ExecutionResult {
                                 state_root: block_header.state_root,
@@ -65,6 +70,22 @@ impl Opt8n {
                             };
 
                             self.execution_fixture.result = execution_result;
+                        }
+
+
+                        // break;
+                    }
+                    self.execute(command);
+                }
+
+                new_block = new_blocks.next() => {
+                    if let Some(new_block) = new_block {
+                        if let Some(block) = self.eth_api.backend.get_block_by_hash(new_block.hash) {
+                            let transactions = block.transactions.into_iter().map(|tx| tx.transaction).collect::<Vec<_>>();
+                            self.update_alloc(&transactions).await;
+
+                            self.execution_fixture.transactions.extend(transactions);
+
                         }
                     }
                 }
