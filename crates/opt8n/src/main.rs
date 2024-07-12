@@ -11,7 +11,7 @@ pub struct Args {}
 #[tokio::main]
 async fn main() -> eyre::Result<()> {
     let _args = Args::parse();
-    let mut opt8n = Opt8n::new(None).await;
+    let mut opt8n = Opt8n::new(None, None).await;
     opt8n.listen().await;
     Ok(())
 }

@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 pub struct ExecutionFixture {
     pub env: ExecutionEnvironment,
     pub alloc: HashMap<Address, AccountState>,
+    pub out_alloc: HashMap<Address, AccountState>,
     #[serde(rename = "txs")]
     pub transactions: Vec<TypedTransaction>,
     pub result: ExecutionResult,
