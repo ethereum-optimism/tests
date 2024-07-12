@@ -4285,7 +4285,9 @@ dependencies = [
 name = "opt8n"
 version = "0.1.0"
 dependencies = [
+ "alloy",
  "anvil",
+ "anvil-core",
  "clap",
  "color-eyre",
  "futures",
