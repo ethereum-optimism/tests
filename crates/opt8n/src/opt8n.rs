@@ -1,6 +1,5 @@
-use std::{hash::Hash, sync::Arc};
+use std::{hash::Hash, str::FromStr, sync::Arc};
 
-use crate::cmd::Opt8nCommand;
 use alloy::{
     primitives::B256,
     rpc::types::{
@@ -9,6 +8,7 @@ use alloy::{
     },
 };
 use anvil::{
+    cmd::NodeArgs,
     eth::{
         pool::transactions::{PoolTransaction, TransactionPriority},
         EthApi,
@@ -16,8 +16,11 @@ use anvil::{
     NodeConfig, NodeHandle,
 };
 use anvil_core::eth::transaction::{PendingTransaction, TypedTransaction};
+use color_eyre::eyre::Result;
 use futures::StreamExt;
 use op_test_vectors::execution::{ExecutionFixture, ExecutionReceipt, ExecutionResult};
+use serde::{Deserialize, Serialize};
+use tokio::io::{AsyncBufReadExt, BufReader};
 
 pub struct Opt8n {
     pub eth_api: EthApi,
@@ -45,11 +48,11 @@ impl Opt8n {
         loop {
             tokio::select! {
                 command = self.receive_command() => {
-                    // TODO: Update to save fixture cmd
-                    if command == Opt8nCommand::Exit {
-                        break;
+                    match command {
+                        Ok(Opt8nCommand::Exit) => break,
+                        Ok(command) => self.execute(command).await.unwrap(),
+                        Err(e) => eprintln!("Error: {:?}", e),
                     }
-                    self.execute(command).await;
                 }
 
                 new_block = new_blocks.next() => {
@@ -67,16 +70,34 @@ impl Opt8n {
         }
     }
 
-    pub async fn receive_command(&self) -> Opt8nCommand {
-        todo!()
+    pub async fn receive_command(&self) -> Result<Opt8nCommand> {
+        let line = BufReader::new(tokio::io::stdin())
+            .lines()
+            .next_line()
+            .await?
+            .unwrap();
+        let words = shellwords::split(&line)?;
+        // TODO: only print logs like this when -v is enabled
+        println!("Received command: {:?}", words);
+        let matches = Opt8nCommand::command().try_get_matches_from(words)?;
+        Ok(Opt8nCommand::from_arg_matches(&matches)?)
     }
 
-    pub async fn execute(&mut self, command: Opt8nCommand) {
+    pub async fn execute(&self, command: Opt8nCommand) -> Result<()> {
         match command {
             Opt8nCommand::Dump => self.dump_execution_fixture().await,
-            Opt8nCommand::Cast(_) => todo!(),
-            _ => unreachable!("Unrecognized command"),
+            Opt8nCommand::Anvil { mut args } => {
+                args.insert(0, "anvil".to_string());
+                println!("Args: {:?}", args);
+                let command = NodeArgs::command_for_update();
+                let matches = command.try_get_matches_from(args)?;
+                let node_args = NodeArgs::from_arg_matches(&matches)?;
+                node_args.run().await?;
+            }
+            Opt8nCommand::Cast { .. } => {}
+            Opt8nCommand::Exit => unreachable!(),
         }
+        Ok(())
     }
 
     /// Updates the pre and post state allocations of the [ExecutionFixture].
@@ -157,6 +178,27 @@ impl Opt8n {
 
             self.execution_fixture.env = block.into();
             self.execution_fixture.result = execution_result;
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
+pub enum Opt8nCommand {
+    Anvil(String),
+    Cast(String),
+    Exit,
+    // TODO: rename
+    Dump,
+}
+
+impl FromStr for Opt8nCommand {
+    type Err = color_eyre::eyre::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().trim().as_ref() {
+            "dump" => Ok(Self::Dump),
+            "exit" => Ok(Self::Exit),
+            _ => Err(color_eyre::eyre::eyre!("Unrecognized command")),
         }
     }
 }

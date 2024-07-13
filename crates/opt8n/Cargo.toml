@@ -6,10 +6,14 @@ edition = "2021"
 [dependencies]
 alloy = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }
+tracing = { version = "0.1" }
 op-test-vectors = { workspace = true }
 clap = { workspace = true }
+shellwords = { workspace = true }
 tokio = { workspace = true }
 futures = { workspace = true }
 color-eyre = { workspace = true }
 anvil = { workspace = true }
 anvil-core = { workspace = true }
+cast = { workspace = true }
+forge-script = { workspace = true }
