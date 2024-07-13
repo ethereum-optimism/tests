@@ -129,7 +129,7 @@ impl Opt8n {
         }
     }
 
-    async fn dump_execution_fixture(&mut self) {
+    pub async fn dump_execution_fixture(&mut self) {
         // Reset the fork
         let _ = self.eth_api.backend.reset_fork(self.fork.clone()).await;
         let pool_txs = self
@@ -178,27 +178,6 @@ impl Opt8n {
 
             self.execution_fixture.env = block.into();
             self.execution_fixture.result = execution_result;
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
-pub enum Opt8nCommand {
-    Anvil(String),
-    Cast(String),
-    Exit,
-    // TODO: rename
-    Dump,
-}
-
-impl FromStr for Opt8nCommand {
-    type Err = color_eyre::eyre::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().trim().as_ref() {
-            "dump" => Ok(Self::Dump),
-            "exit" => Ok(Self::Exit),
-            _ => Err(color_eyre::eyre::eyre!("Unrecognized command")),
         }
     }
 }
