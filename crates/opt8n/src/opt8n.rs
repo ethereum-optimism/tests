@@ -58,20 +58,23 @@ impl Opt8n {
                             })
                         }).collect::<Vec<Arc<_>>>();
 
-                        let block_outcome = self.eth_api.backend.mine_block(pool_txs).await;
-                        if let Some(block) =self.eth_api.backend.get_block(block_outcome.block_number) {
+                        let mined_block = self.eth_api.backend.mine_block(pool_txs).await;
+                        if let Some(block) = self.eth_api.backend.get_block(mined_block.block_number) {
+
+                            // TODO: collect into futures ordered
                             let mut receipts: Vec<ExecutionReceipt> = vec![];
                             for tx in &block.transactions {
-                                let hash = tx.transaction.hash();
-                                if let Some(receipt) = self.eth_api.backend.transaction_receipt(hash).await.expect("Failed to get receipt") {
-
+                                if let Some(receipt) = self.eth_api.backend.transaction_receipt(tx.transaction.hash()).await.expect("Failed to get receipt") {
+                                    receipts.push(receipt.into());
                                 }
                             }
+
                             let block_header = &block.header;
                             let execution_result = ExecutionResult {
                                 state_root: block_header.state_root,
                                 tx_root: block_header.transactions_root,
                                 receipt_root: block_header.receipts_root,
+                                // TODO: Update logs hash
                                 logs_hash: B256::default(),
                                 logs_bloom: block_header.logs_bloom,
                                 receipts,

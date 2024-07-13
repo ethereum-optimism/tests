@@ -2,9 +2,9 @@ use std::collections::HashMap;
 
 use alloy::primitives::{Address, Bloom, B256, U256};
 use alloy::rpc::types::trace::geth::AccountState;
+use alloy::rpc::types::{Log, Receipt, TransactionReceipt};
 use anvil_core::eth::block::Block;
-use anvil_core::eth::transaction::TypedTransaction;
-use op_alloy_consensus::OpReceiptEnvelope;
+use anvil_core::eth::transaction::{TypedReceipt, TypedTransaction};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Default)]
@@ -51,7 +51,7 @@ pub struct ExecutionReceipt {
     pub block_hash: B256,
     pub transaction_index: U256,
     #[serde(flatten)]
-    pub op_receipt: OpReceiptEnvelope,
+    pub inner: TypedReceipt<Log>,
 }
 
 impl From<Block> for ExecutionEnvironment {
@@ -64,6 +64,20 @@ impl From<Block> for ExecutionEnvironment {
             current_number: U256::from(block.header.number),
             current_timestamp: U256::from(block.header.timestamp),
             block_hashes: None,
+        }
+    }
+}
+
+impl From<TransactionReceipt<TypedReceipt<Log>>> for ExecutionReceipt {
+    fn from(receipt: TransactionReceipt<TypedReceipt<Log>>) -> ExecutionReceipt {
+        ExecutionReceipt {
+            transaction_hash: receipt.transaction_hash,
+            root: receipt.state_root.unwrap_or_default(),
+            contract_address: receipt.contract_address.unwrap_or_default(),
+            gas_used: U256::from(receipt.gas_used),
+            block_hash: receipt.block_hash.unwrap_or_default(),
+            transaction_index: U256::from(receipt.transaction_index.unwrap_or_default()),
+            inner: receipt.inner,
         }
     }
 }
