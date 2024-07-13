@@ -47,45 +47,9 @@ impl Opt8n {
                 command = self.receive_command() => {
                     // TODO: Update to save fixture cmd
                     if command == Opt8nCommand::Exit {
-                        // Reset the fork
-                        let _ = self.eth_api.backend.reset_fork(self.fork.clone()).await;
-                        let pool_txs = self.execution_fixture.transactions.iter().cloned().map(|tx| {
-                            Arc::new(PoolTransaction {
-                                pending_transaction: PendingTransaction::new(tx).expect("Failed to create pending transaction"),
-                                requires: vec![],
-                                provides: vec![],
-                                priority: TransactionPriority(1) // TODO: revisit these fields
-                            })
-                        }).collect::<Vec<Arc<_>>>();
-
-                        let mined_block = self.eth_api.backend.mine_block(pool_txs).await;
-                        if let Some(block) = self.eth_api.backend.get_block(mined_block.block_number) {
-
-                            // TODO: collect into futures ordered
-                            let mut receipts: Vec<ExecutionReceipt> = vec![];
-                            for tx in &block.transactions {
-                                if let Some(receipt) = self.eth_api.backend.transaction_receipt(tx.transaction.hash()).await.expect("Failed to get receipt") {
-                                    receipts.push(receipt.into());
-                                }
-                            }
-
-                            let block_header = &block.header;
-                            let execution_result = ExecutionResult {
-                                state_root: block_header.state_root,
-                                tx_root: block_header.transactions_root,
-                                receipt_root: block_header.receipts_root,
-                                // TODO: Update logs hash
-                                logs_hash: B256::default(),
-                                logs_bloom: block_header.logs_bloom,
-                                receipts,
-                            };
-
-                            self.execution_fixture.env = block.into();
-                            self.execution_fixture.result = execution_result;
-                        }
                         break;
                     }
-                    self.execute(command);
+                    self.execute(command).await;
                 }
 
                 new_block = new_blocks.next() => {
@@ -100,6 +64,18 @@ impl Opt8n {
                     }
                 }
             }
+        }
+    }
+
+    pub async fn receive_command(&self) -> Opt8nCommand {
+        todo!()
+    }
+
+    pub async fn execute(&mut self, command: Opt8nCommand) {
+        match command {
+            Opt8nCommand::Dump => self.dump_execution_fixture().await,
+            Opt8nCommand::Cast(_) => todo!(),
+            _ => unreachable!("Unrecognized command"),
         }
     }
 
@@ -132,14 +108,55 @@ impl Opt8n {
         }
     }
 
-    pub async fn receive_command(&self) -> Opt8nCommand {
-        todo!()
-    }
+    async fn dump_execution_fixture(&mut self) {
+        // Reset the fork
+        let _ = self.eth_api.backend.reset_fork(self.fork.clone()).await;
+        let pool_txs = self
+            .execution_fixture
+            .transactions
+            .iter()
+            .cloned()
+            .map(|tx| {
+                let gas_price = tx.gas_price();
+                Arc::new(PoolTransaction {
+                    pending_transaction: PendingTransaction::new(tx)
+                        .expect("Failed to create pending transaction"),
+                    requires: vec![],
+                    provides: vec![],
+                    priority: TransactionPriority(gas_price),
+                })
+            })
+            .collect::<Vec<Arc<_>>>();
 
-    pub fn execute(&self, command: Opt8nCommand) {
-        match command {
-            Opt8nCommand::Cast(_) => todo!(),
-            _ => unreachable!("Unrecognized command"),
+        let mined_block = self.eth_api.backend.mine_block(pool_txs).await;
+        if let Some(block) = self.eth_api.backend.get_block(mined_block.block_number) {
+            // TODO: collect into futures ordered
+            let mut receipts: Vec<ExecutionReceipt> = vec![];
+            for tx in &block.transactions {
+                if let Some(receipt) = self
+                    .eth_api
+                    .backend
+                    .transaction_receipt(tx.transaction.hash())
+                    .await
+                    .expect("Failed to get receipt")
+                {
+                    receipts.push(receipt.into());
+                }
+            }
+
+            let block_header = &block.header;
+            let execution_result = ExecutionResult {
+                state_root: block_header.state_root,
+                tx_root: block_header.transactions_root,
+                receipt_root: block_header.receipts_root,
+                // TODO: Update logs hash
+                logs_hash: B256::default(),
+                logs_bloom: block_header.logs_bloom,
+                receipts,
+            };
+
+            self.execution_fixture.env = block.into();
+            self.execution_fixture.result = execution_result;
         }
     }
 }

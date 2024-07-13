@@ -7,7 +7,8 @@ pub enum Opt8nCommand {
     Anvil(String),
     Cast(String),
     Exit,
-    // Help
+    // TODO: rename
+    Dump,
 }
 
 impl FromStr for Opt8nCommand {
@@ -15,6 +16,7 @@ impl FromStr for Opt8nCommand {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().trim().as_ref() {
+            "dump" => Ok(Self::Dump),
             "exit" => Ok(Self::Exit),
             _ => Err(eyre::eyre!("Unrecognized command")),
         }
