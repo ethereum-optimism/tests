@@ -1,31 +1,24 @@
 use std::str::FromStr;
 
+use clap::{command, Parser};
 use serde::{Deserialize, Serialize};
 
-// #[derive(Parser, Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
-// #[clap(rename_all = "kebab_case", infer_subcommands = true, multicall = true)]
-// pub enum Opt8nCommand {
-//     #[command(visible_alias = "a")]
-//     Anvil {
-//         #[arg(index = 1, allow_hyphen_values = true)]
-//         args: Vec<String>,
-//     },
-//     #[command(visible_alias = "c")]
-//     Cast {
-//         #[arg(index = 1, allow_hyphen_values = true)]
-//         args: Vec<String>,
-//     },
-//     #[command(visible_alias = "e")]
-//     Exit,
-// }
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[derive(Parser, Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[clap(rename_all = "kebab_case", infer_subcommands = true, multicall = true)]
 pub enum Opt8nCommand {
-    Anvil(String),
-    Cast(String),
-    Exit,
-    // TODO: rename
+    #[command(visible_alias = "a")]
+    Anvil {
+        #[arg(index = 1, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    #[command(visible_alias = "c")]
+    Cast {
+        #[arg(index = 1, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
     Dump,
+    #[command(visible_alias = "e")]
+    Exit,
 }
 
 impl FromStr for Opt8nCommand {
@@ -33,7 +26,6 @@ impl FromStr for Opt8nCommand {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         //TODO: check if command starts with anvil or cast etc
-
         match s.to_lowercase().trim().as_ref() {
             "dump" => Ok(Self::Dump),
             //TODO: match anvil or just parse or something

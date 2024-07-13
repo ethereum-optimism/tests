@@ -1,4 +1,5 @@
 use crate::opt8n::Opt8n;
+use alloy::rpc::types::anvil::Forking;
 use anvil::cmd::NodeArgs;
 use clap::{Command, CommandFactory, Parser, Subcommand};
 use color_eyre::eyre;
@@ -11,8 +12,8 @@ use tracing::trace;
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
-
-    // TODO: fork url
+    #[command(flatten)]
+    pub fork_url: ForkChoice,
     #[command(flatten)]
     pub node_args: NodeArgs,
 }
@@ -31,11 +32,26 @@ pub enum Commands {
     #[command(visible_alias = "r")]
     Repl {},
 }
+#[derive(Parser, Clone, Debug)]
+pub struct ForkChoice {
+    pub fork_url: Option<String>,
+    pub block_number: Option<u64>,
+}
+
+impl From<ForkChoice> for Forking {
+    fn from(fork_choice: ForkChoice) -> Self {
+        Forking {
+            json_rpc_url: fork_choice.fork_url,
+            block_number: fork_choice.block_number,
+        }
+    }
+}
 
 impl Cli {
     pub async fn run(self) -> eyre::Result<()> {
         let node_config = self.node_args.into_node_config();
-        let mut opt8n = Opt8n::new(Some(node_config), None).await;
+        let forking = self.fork_url.into();
+        let mut opt8n = Opt8n::new(Some(node_config), Some(forking)).await;
 
         match self.command {
             Commands::Script { script_args } => {
@@ -44,7 +60,7 @@ impl Cli {
             }
             Commands::Repl { .. } => {
                 println!("Starting REPL");
-                opt8n.listen().await;
+                opt8n.listen().await?;
             }
         }
         Ok(())
