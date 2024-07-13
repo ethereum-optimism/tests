@@ -1,9 +1,12 @@
-use std::sync::Arc;
+use std::{hash::Hash, sync::Arc};
 
 use crate::cmd::Opt8nCommand;
-use alloy::rpc::types::{
-    anvil::Forking,
-    trace::geth::{GethDebugTracingOptions, GethTrace, PreStateConfig, PreStateFrame},
+use alloy::{
+    primitives::B256,
+    rpc::types::{
+        anvil::Forking,
+        trace::geth::{GethDebugTracingOptions, GethTrace, PreStateConfig, PreStateFrame},
+    },
 };
 use anvil::{
     eth::{
@@ -57,23 +60,27 @@ impl Opt8n {
 
                         let block_outcome = self.eth_api.backend.mine_block(pool_txs).await;
                         if let Some(block) =self.eth_api.backend.get_block(block_outcome.block_number) {
-                            // TODO: get receipts
-                            let receipts: Vec<ExecutionReceipt> = vec![];
-                            let block_header = block.header;
+                            let mut receipts: Vec<ExecutionReceipt> = vec![];
+                            for tx in &block.transactions {
+                                let hash = tx.transaction.hash();
+                                if let Some(receipt) = self.eth_api.backend.transaction_receipt(hash).await.expect("Failed to get receipt") {
+
+                                }
+                            }
+                            let block_header = &block.header;
                             let execution_result = ExecutionResult {
                                 state_root: block_header.state_root,
                                 tx_root: block_header.transactions_root,
                                 receipt_root: block_header.receipts_root,
-                                logs_hash: todo!("logs_hash"),
+                                logs_hash: B256::default(),
                                 logs_bloom: block_header.logs_bloom,
                                 receipts,
                             };
 
+                            self.execution_fixture.env = block.into();
                             self.execution_fixture.result = execution_result;
                         }
-
-
-                        // break;
+                        break;
                     }
                     self.execute(command);
                 }
