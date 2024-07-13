@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use alloy::primitives::{Address, Bloom, B256, U256};
 use alloy::rpc::types::trace::geth::AccountState;
+use anvil_core::eth::block::Block;
 use anvil_core::eth::transaction::TypedTransaction;
 use op_alloy_consensus::OpReceiptEnvelope;
 use serde::{Deserialize, Serialize};
@@ -51,6 +52,20 @@ pub struct ExecutionReceipt {
     pub transaction_index: U256,
     #[serde(flatten)]
     pub op_receipt: OpReceiptEnvelope,
+}
+
+impl From<Block> for ExecutionEnvironment {
+    fn from(block: Block) -> Self {
+        Self {
+            current_coinbase: block.header.beneficiary,
+            current_difficulty: block.header.difficulty,
+            current_gas_limit: U256::from(block.header.gas_limit),
+            previous_hash: block.header.parent_hash,
+            current_number: U256::from(block.header.number),
+            current_timestamp: U256::from(block.header.timestamp),
+            block_hashes: None,
+        }
+    }
 }
 
 #[cfg(test)]
