@@ -1,4 +1,4 @@
-use std::{hash::Hash, str::FromStr, sync::Arc};
+use std::sync::Arc;
 
 use alloy::{
     primitives::B256,
@@ -16,11 +16,13 @@ use anvil::{
     NodeConfig, NodeHandle,
 };
 use anvil_core::eth::transaction::{PendingTransaction, TypedTransaction};
+use clap::{CommandFactory, FromArgMatches};
 use color_eyre::eyre::Result;
 use futures::StreamExt;
 use op_test_vectors::execution::{ExecutionFixture, ExecutionReceipt, ExecutionResult};
-use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, BufReader};
+
+use crate::repl::Opt8nCommand;
 
 pub struct Opt8n {
     pub eth_api: EthApi,
@@ -42,7 +44,7 @@ impl Opt8n {
         }
     }
 
-    pub async fn listen(&mut self) {
+    pub async fn listen(&mut self) -> Result<()> {
         // TODO: I might have to update this to use alloy if the relevent methods are not available
         let mut new_blocks = self.eth_api.backend.new_block_notifications();
         loop {
@@ -59,7 +61,7 @@ impl Opt8n {
                     if let Some(new_block) = new_block {
                         if let Some(block) = self.eth_api.backend.get_block_by_hash(new_block.hash) {
                             let transactions = block.transactions.into_iter().map(|tx| tx.transaction).collect::<Vec<_>>();
-                            self.update_alloc(&transactions).await;
+                            self.update_alloc(&transactions).await?;
 
                             self.execution_fixture.transactions.extend(transactions);
 
@@ -68,6 +70,8 @@ impl Opt8n {
                 }
             }
         }
+
+        Ok(())
     }
 
     pub async fn receive_command(&self) -> Result<Opt8nCommand> {
@@ -83,9 +87,9 @@ impl Opt8n {
         Ok(Opt8nCommand::from_arg_matches(&matches)?)
     }
 
-    pub async fn execute(&self, command: Opt8nCommand) -> Result<()> {
+    pub async fn execute(&mut self, command: Opt8nCommand) -> Result<()> {
         match command {
-            Opt8nCommand::Dump => self.dump_execution_fixture().await,
+            Opt8nCommand::Dump => self.dump_execution_fixture().await?,
             Opt8nCommand::Anvil { mut args } => {
                 args.insert(0, "anvil".to_string());
                 println!("Args: {:?}", args);
@@ -101,10 +105,10 @@ impl Opt8n {
     }
 
     /// Updates the pre and post state allocations of the [ExecutionFixture].
-    async fn update_alloc(&mut self, transactions: &Vec<TypedTransaction>) {
+    async fn update_alloc(&mut self, transactions: &Vec<TypedTransaction>) -> Result<()> {
         // TODO: Make this concurrent
         for transaction in transactions {
-            if let Ok(GethTrace::PreStateTracer(PreStateFrame::Diff(frame))) = self
+            if let GethTrace::PreStateTracer(PreStateFrame::Diff(frame)) = self
                 .eth_api
                 .backend
                 .debug_trace_transaction(
@@ -113,7 +117,7 @@ impl Opt8n {
                         diff_mode: Some(true),
                     }),
                 )
-                .await
+                .await?
             {
                 frame.pre.into_iter().for_each(|(address, account)| {
                     self.execution_fixture
@@ -127,9 +131,11 @@ impl Opt8n {
                 });
             }
         }
+
+        Ok(())
     }
 
-    pub async fn dump_execution_fixture(&mut self) {
+    pub async fn dump_execution_fixture(&mut self) -> Result<()> {
         // Reset the fork
         let _ = self.eth_api.backend.reset_fork(self.fork.clone()).await;
         let pool_txs = self
@@ -139,9 +145,9 @@ impl Opt8n {
             .cloned()
             .map(|tx| {
                 let gas_price = tx.gas_price();
+                let pending_tx = PendingTransaction::new(tx).expect("Failed to create pending tx");
                 Arc::new(PoolTransaction {
-                    pending_transaction: PendingTransaction::new(tx)
-                        .expect("Failed to create pending transaction"),
+                    pending_transaction: pending_tx,
                     requires: vec![],
                     provides: vec![],
                     priority: TransactionPriority(gas_price),
@@ -158,8 +164,7 @@ impl Opt8n {
                     .eth_api
                     .backend
                     .transaction_receipt(tx.transaction.hash())
-                    .await
-                    .expect("Failed to get receipt")
+                    .await?
                 {
                     receipts.push(receipt.into());
                 }
@@ -179,5 +184,7 @@ impl Opt8n {
             self.execution_fixture.env = block.into();
             self.execution_fixture.result = execution_result;
         }
+
+        Ok(())
     }
 }

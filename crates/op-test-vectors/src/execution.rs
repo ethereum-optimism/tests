@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use alloy::primitives::{Address, Bloom, B256, U256};
 use alloy::rpc::types::trace::geth::AccountState;
-use alloy::rpc::types::{Log, Receipt, TransactionReceipt};
+use alloy::rpc::types::{Log, TransactionReceipt};
 use anvil_core::eth::block::Block;
 use anvil_core::eth::transaction::{TypedReceipt, TypedTransaction};
 use serde::{Deserialize, Serialize};
