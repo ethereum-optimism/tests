@@ -1,11 +1,10 @@
-pub mod cli;
 pub mod opt8n;
 pub mod repl;
 
 use clap::FromArgMatches;
 use color_eyre::eyre;
 
-use crate::cli::Cli;
+use crate::repl::Cli;
 
 #[tokio::main]
 async fn main() -> eyre::Result<()> {
