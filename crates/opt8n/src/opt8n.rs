@@ -1,10 +1,13 @@
-use std::sync::Arc;
+use std::{io::Write, sync::Arc};
 
 use alloy::{
     primitives::B256,
     rpc::types::{
         anvil::Forking,
-        trace::geth::{GethDebugTracingOptions, GethTrace, PreStateConfig, PreStateFrame},
+        trace::geth::{
+            GethDebugBuiltInTracerType, GethDebugTracerType, GethDebugTracingOptions, GethTrace,
+            PreStateConfig, PreStateFrame,
+        },
     },
 };
 use anvil::{
@@ -44,6 +47,7 @@ impl Opt8n {
         }
     }
 
+    /// Listens for commands, and new blocks from the block stream.
     pub async fn listen(&mut self) -> Result<()> {
         // TODO: I might have to update this to use alloy if the relevent methods are not available
         let mut new_blocks = self.eth_api.backend.new_block_notifications();
@@ -61,10 +65,7 @@ impl Opt8n {
                     if let Some(new_block) = new_block {
                         if let Some(block) = self.eth_api.backend.get_block_by_hash(new_block.hash) {
                             let transactions = block.transactions.into_iter().map(|tx| tx.transaction).collect::<Vec<_>>();
-                            self.update_alloc(&transactions).await?;
-
                             self.execution_fixture.transactions.extend(transactions);
-
                         }
                     }
                 }
@@ -74,7 +75,7 @@ impl Opt8n {
         Ok(())
     }
 
-    pub async fn receive_command(&self) -> Result<Opt8nCommand> {
+    async fn receive_command(&self) -> Result<Opt8nCommand> {
         let line = BufReader::new(tokio::io::stdin())
             .lines()
             .next_line()
@@ -87,7 +88,7 @@ impl Opt8n {
         Ok(Opt8nCommand::from_arg_matches(&matches)?)
     }
 
-    pub async fn execute(&mut self, command: Opt8nCommand) -> Result<()> {
+    async fn execute(&mut self, command: Opt8nCommand) -> Result<()> {
         match command {
             Opt8nCommand::Dump => self.dump_execution_fixture().await?,
             Opt8nCommand::Anvil { mut args } => {
@@ -105,7 +106,7 @@ impl Opt8n {
     }
 
     /// Updates the pre and post state allocations of the [ExecutionFixture].
-    async fn update_alloc(&mut self, transactions: &Vec<TypedTransaction>) -> Result<()> {
+    pub async fn update_alloc(&mut self, transactions: &Vec<TypedTransaction>) -> Result<()> {
         // TODO: Make this concurrent
         for transaction in transactions {
             if let GethTrace::PreStateTracer(PreStateFrame::Diff(frame)) = self
@@ -113,7 +114,13 @@ impl Opt8n {
                 .backend
                 .debug_trace_transaction(
                     transaction.hash(),
-                    GethDebugTracingOptions::default().with_prestate_config(PreStateConfig {
+                    GethDebugTracingOptions {
+                        tracer: Some(GethDebugTracerType::BuiltInTracer(
+                            GethDebugBuiltInTracerType::PreStateTracer,
+                        )),
+                        ..Default::default()
+                    }
+                    .with_prestate_config(PreStateConfig {
                         diff_mode: Some(true),
                     }),
                 )
@@ -159,16 +166,21 @@ impl Opt8n {
         if let Some(block) = self.eth_api.backend.get_block(mined_block.block_number) {
             // TODO: collect into futures ordered
             let mut receipts: Vec<ExecutionReceipt> = vec![];
-            for tx in &block.transactions {
-                if let Some(receipt) = self
-                    .eth_api
-                    .backend
-                    .transaction_receipt(tx.transaction.hash())
-                    .await?
-                {
+            // TODO: This could be done in 1 loop instead of 2
+            let ordered_txs = block
+                .transactions
+                .iter()
+                .cloned()
+                .map(|tx| tx.transaction)
+                .collect::<Vec<_>>();
+
+            for tx in &ordered_txs {
+                if let Some(receipt) = self.eth_api.backend.transaction_receipt(tx.hash()).await? {
                     receipts.push(receipt.into());
                 }
             }
+
+            self.update_alloc(&ordered_txs).await?;
 
             let block_header = &block.header;
             let execution_result = ExecutionResult {
@@ -185,6 +197,17 @@ impl Opt8n {
             self.execution_fixture.result = execution_result;
         }
 
+        println!("{}", serde_json::to_string_pretty(&self.execution_fixture)?);
+
         Ok(())
     }
+}
+
+#[cfg(test)]
+mod tests {
+    #[tokio::test]
+    pub async fn test_update_alloc() {}
+
+    #[tokio::test]
+    pub async fn test_dump_execution_fixture() {}
 }
