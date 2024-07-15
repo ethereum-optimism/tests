@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{fs, path::PathBuf, sync::Arc};
 
 use alloy::{
     primitives::B256,
@@ -31,10 +31,15 @@ pub struct Opt8n {
     pub node_handle: NodeHandle,
     pub execution_fixture: ExecutionFixture,
     pub fork: Forking,
+    pub output_file: PathBuf,
 }
 
 impl Opt8n {
-    pub async fn new(node_config: Option<NodeConfig>, fork: Option<Forking>) -> Self {
+    pub async fn new(
+        node_config: Option<NodeConfig>,
+        fork: Option<Forking>,
+        output_file: PathBuf,
+    ) -> Self {
         let node_config = node_config.unwrap_or_default().with_optimism(true);
         let (eth_api, node_handle) = anvil::spawn(node_config).await;
 
@@ -43,6 +48,7 @@ impl Opt8n {
             node_handle,
             execution_fixture: ExecutionFixture::default(),
             fork: fork.unwrap_or_default(),
+            output_file,
         }
     }
 
@@ -193,7 +199,9 @@ impl Opt8n {
             self.execution_fixture.result = execution_result;
         }
 
-        println!("{}", serde_json::to_string_pretty(&self.execution_fixture)?);
+        // Output the execution fixture to file
+        let file = fs::File::create(&self.output_file)?;
+        serde_json::to_writer_pretty(file, &self.execution_fixture)?;
 
         Ok(())
     }

@@ -1,5 +1,7 @@
 pub mod opt8n;
 
+use std::path::PathBuf;
+
 use alloy::rpc::types::anvil::Forking;
 use anvil::cmd::NodeArgs;
 use clap::Parser;
@@ -14,6 +16,8 @@ pub struct Args {
     pub command: Commands,
     #[command(flatten)]
     pub node_args: NodeArgs,
+    #[clap(short, long, help = "Output file for the execution test fixture")]
+    pub output: PathBuf,
 }
 
 #[derive(Parser, Clone, Debug)]
@@ -41,7 +45,7 @@ async fn main() -> eyre::Result<()> {
     });
 
     let node_config = args.node_args.into_node_config();
-    let mut opt8n = Opt8n::new(Some(node_config), forking).await;
+    let mut opt8n = Opt8n::new(Some(node_config), forking, args.output).await;
 
     match args.command {
         Commands::Repl {} => {
