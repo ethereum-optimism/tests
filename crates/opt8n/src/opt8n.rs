@@ -218,21 +218,6 @@ pub enum ReplCommand {
     Exit,
 }
 
-#[derive(Parser, Clone, Debug)]
-pub struct ForkChoice {
-    pub fork_url: Option<String>,
-    pub block_number: Option<u64>,
-}
-
-impl From<ForkChoice> for Forking {
-    fn from(fork_choice: ForkChoice) -> Self {
-        Forking {
-            json_rpc_url: fork_choice.fork_url,
-            block_number: fork_choice.block_number,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     #[tokio::test]

@@ -2,18 +2,16 @@ pub mod opt8n;
 
 use alloy::rpc::types::anvil::Forking;
 use anvil::cmd::NodeArgs;
-use clap::{FromArgMatches, Parser};
+use clap::Parser;
 use color_eyre::eyre;
 use forge_script::ScriptArgs;
-use opt8n::{ForkChoice, Opt8n};
+use opt8n::Opt8n;
 
 #[derive(Parser, Clone, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
     #[command(subcommand)]
     pub command: Commands,
-    #[command(flatten)]
-    pub fork_url: ForkChoice,
     #[command(flatten)]
     pub node_args: NodeArgs,
 }
@@ -38,14 +36,19 @@ async fn main() -> eyre::Result<()> {
     let args = Args::parse();
 
     match args.command {
-        Commands::Script { script_args } => {
+        Commands::Script { .. } => {
             todo!("Implement script")
         }
 
         Commands::Repl {} => {
+            let evm_options = &args.node_args.evm_opts;
+            let forking = evm_options.fork_url.as_ref().map(|fork_url| Forking {
+                json_rpc_url: Some(fork_url.url.clone()),
+                block_number: evm_options.fork_block_number,
+            });
+
             let node_config = args.node_args.into_node_config();
-            let forking = args.fork_url.into();
-            let mut opt8n = Opt8n::new(Some(node_config), Some(forking)).await;
+            let mut opt8n = Opt8n::new(Some(node_config), forking).await;
             opt8n.repl().await?;
         }
     }
