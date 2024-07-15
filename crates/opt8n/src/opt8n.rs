@@ -19,13 +19,12 @@ use anvil::{
     NodeConfig, NodeHandle,
 };
 use anvil_core::eth::transaction::{PendingTransaction, TypedTransaction};
-use clap::{CommandFactory, FromArgMatches};
+use clap::{CommandFactory, FromArgMatches, Parser};
 use color_eyre::eyre::Result;
 use futures::StreamExt;
 use op_test_vectors::execution::{ExecutionFixture, ExecutionReceipt, ExecutionResult};
+use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, BufReader};
-
-use crate::repl::Opt8nCommand;
 
 pub struct Opt8n {
     pub eth_api: EthApi,
@@ -48,15 +47,14 @@ impl Opt8n {
     }
 
     /// Listens for commands, and new blocks from the block stream.
-    pub async fn listen(&mut self) -> Result<()> {
-        // TODO: I might have to update this to use alloy if the relevent methods are not available
+    pub async fn repl(&mut self) -> Result<()> {
         let mut new_blocks = self.eth_api.backend.new_block_notifications();
         loop {
             tokio::select! {
                 command = self.receive_command() => {
                     match command {
-                        Ok(Opt8nCommand::Exit) => break,
-                        Ok(command) => self.execute(command).await.unwrap(),
+                        Ok(ReplCommand::Exit) => break,
+                        Ok(command) => self.execute(command).await?,
                         Err(e) => eprintln!("Error: {:?}", e),
                     }
                 }
@@ -75,23 +73,22 @@ impl Opt8n {
         Ok(())
     }
 
-    async fn receive_command(&self) -> Result<Opt8nCommand> {
+    async fn receive_command(&self) -> Result<ReplCommand> {
         let line = BufReader::new(tokio::io::stdin())
             .lines()
             .next_line()
             .await?
             .unwrap();
         let words = shellwords::split(&line)?;
-        // TODO: only print logs like this when -v is enabled
         println!("Received command: {:?}", words);
-        let matches = Opt8nCommand::command().try_get_matches_from(words)?;
-        Ok(Opt8nCommand::from_arg_matches(&matches)?)
+        let matches = ReplCommand::command().try_get_matches_from(words)?;
+        Ok(ReplCommand::from_arg_matches(&matches)?)
     }
 
-    async fn execute(&mut self, command: Opt8nCommand) -> Result<()> {
+    async fn execute(&mut self, command: ReplCommand) -> Result<()> {
         match command {
-            Opt8nCommand::Dump => self.dump_execution_fixture().await?,
-            Opt8nCommand::Anvil { mut args } => {
+            ReplCommand::Dump => self.dump_execution_fixture().await?,
+            ReplCommand::Anvil { mut args } => {
                 args.insert(0, "anvil".to_string());
                 println!("Args: {:?}", args);
                 let command = NodeArgs::command_for_update();
@@ -99,8 +96,8 @@ impl Opt8n {
                 let node_args = NodeArgs::from_arg_matches(&matches)?;
                 node_args.run().await?;
             }
-            Opt8nCommand::Cast { .. } => {}
-            Opt8nCommand::Exit => unreachable!(),
+            ReplCommand::Cast { .. } => {}
+            ReplCommand::Exit => unreachable!(),
         }
         Ok(())
     }
@@ -200,6 +197,39 @@ impl Opt8n {
         println!("{}", serde_json::to_string_pretty(&self.execution_fixture)?);
 
         Ok(())
+    }
+}
+
+#[derive(Parser, Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[clap(rename_all = "kebab_case", infer_subcommands = true, multicall = true)]
+pub enum ReplCommand {
+    #[command(visible_alias = "a")]
+    Anvil {
+        #[arg(index = 1, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    #[command(visible_alias = "c")]
+    Cast {
+        #[arg(index = 1, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    Dump,
+    #[command(visible_alias = "e")]
+    Exit,
+}
+
+#[derive(Parser, Clone, Debug)]
+pub struct ForkChoice {
+    pub fork_url: Option<String>,
+    pub block_number: Option<u64>,
+}
+
+impl From<ForkChoice> for Forking {
+    fn from(fork_choice: ForkChoice) -> Self {
+        Forking {
+            json_rpc_url: fork_choice.fork_url,
+            block_number: fork_choice.block_number,
+        }
     }
 }
 
