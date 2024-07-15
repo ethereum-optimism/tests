@@ -221,6 +221,8 @@ pub enum ReplCommand {
         args: Vec<String>,
     },
     Dump,
+    // TODO: implement clear
+    // TODO: implement reset
     #[command(visible_alias = "e")]
     Exit,
 }
