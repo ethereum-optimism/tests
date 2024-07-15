@@ -80,7 +80,7 @@ impl Opt8n {
             .await?
             .unwrap();
         let words = shellwords::split(&line)?;
-        println!("Received command: {:?}", words);
+
         let matches = ReplCommand::command().try_get_matches_from(words)?;
         Ok(ReplCommand::from_arg_matches(&matches)?)
     }
@@ -90,7 +90,6 @@ impl Opt8n {
             ReplCommand::Dump => self.dump_execution_fixture().await?,
             ReplCommand::Anvil { mut args } => {
                 args.insert(0, "anvil".to_string());
-                println!("Args: {:?}", args);
                 let command = NodeArgs::command_for_update();
                 let matches = command.try_get_matches_from(args)?;
                 let node_args = NodeArgs::from_arg_matches(&matches)?;
@@ -221,8 +220,12 @@ pub enum ReplCommand {
 #[cfg(test)]
 mod tests {
     #[tokio::test]
-    pub async fn test_update_alloc() {}
+    pub async fn test_update_alloc() {
+        // TODO:
+    }
 
     #[tokio::test]
-    pub async fn test_dump_execution_fixture() {}
+    pub async fn test_dump_execution_fixture() {
+        // TODO:
+    }
 }
