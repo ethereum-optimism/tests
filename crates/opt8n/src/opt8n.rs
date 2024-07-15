@@ -1,7 +1,9 @@
 use std::{fs, path::PathBuf, sync::Arc};
 
 use alloy::{
+    eips::BlockId,
     primitives::B256,
+    providers::ProviderBuilder,
     rpc::types::{
         anvil::Forking,
         trace::geth::{
@@ -23,6 +25,7 @@ use clap::{CommandFactory, FromArgMatches, Parser};
 use color_eyre::eyre::Result;
 use futures::StreamExt;
 use op_test_vectors::execution::{ExecutionFixture, ExecutionReceipt, ExecutionResult};
+use revm::db::AlloyDB;
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, BufReader};
 
@@ -31,6 +34,7 @@ pub struct Opt8n {
     pub node_handle: NodeHandle,
     pub execution_fixture: ExecutionFixture,
     pub fork: Forking,
+    pub revm_db: AlloyDB,
     pub output_file: PathBuf,
 }
 
@@ -43,18 +47,26 @@ impl Opt8n {
         let node_config = node_config.unwrap_or_default().with_optimism(true);
         let (eth_api, node_handle) = anvil::spawn(node_config).await;
 
+        // let anvil_endpoint = anvil.endpoint();
+        // let http_provider = ProviderBuilder::new().on_http(anvil_endpoint);
+        // let revm_db = AlloyDB::new(http_provider, BlockId::latest());
+
         Self {
             eth_api,
             node_handle,
             execution_fixture: ExecutionFixture::default(),
             fork: fork.unwrap_or_default(),
             output_file,
+            revm_db: todo!(),
         }
     }
 
     /// Listens for commands, and new blocks from the block stream.
     pub async fn repl(&mut self) -> Result<()> {
         let mut new_blocks = self.eth_api.backend.new_block_notifications();
+
+        tracing::info!("Listening");
+
         loop {
             tokio::select! {
                 command = self.receive_command() => {
@@ -66,6 +78,7 @@ impl Opt8n {
                 }
 
                 new_block = new_blocks.next() => {
+                    tracing::info!("New block: {:?}", new_block);
                     if let Some(new_block) = new_block {
                         if let Some(block) = self.eth_api.backend.get_block_by_hash(new_block.hash) {
                             let transactions = block.transactions.into_iter().map(|tx| tx.transaction).collect::<Vec<_>>();
