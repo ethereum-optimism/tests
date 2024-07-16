@@ -33,12 +33,16 @@ use op_test_vectors::execution::{ExecutionFixture, ExecutionReceipt, ExecutionRe
 use revm::primitives::{BlobExcessGasAndPrice, TxEnv, U256};
 use revm::{db::AlloyDB, primitives::BlockEnv, EvmBuilder};
 use serde::{Deserialize, Serialize};
-use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::{
+    io::{AsyncBufReadExt, BufReader},
+    signal::unix::Signal,
+};
 pub struct Opt8n {
     pub eth_api: EthApi,
     pub node_handle: NodeHandle,
     pub execution_fixture: ExecutionFixture,
-    pub fork: Forking,
+    pub fork: Option<Forking>,
+    pub node_config: NodeConfig,
     pub output_file: PathBuf,
 }
 
@@ -49,18 +53,14 @@ impl Opt8n {
         output_file: PathBuf,
     ) -> Self {
         let node_config = node_config.unwrap_or_default().with_optimism(true);
-        let (eth_api, node_handle) = anvil::spawn(node_config).await;
+        let (eth_api, node_handle) = anvil::spawn(node_config.clone()).await;
 
-        // TODO: unwrap the fork or, set it to the current vlaues for the node
-        let fork = fork.unwrap_or(Forking {
-            block_number: Some(0),
-            json_rpc_url: Some(node_handle.http_endpoint()),
-        });
         Self {
             eth_api,
             node_handle,
             execution_fixture: ExecutionFixture::default(),
             fork,
+            node_config,
             output_file,
         }
     }
@@ -139,7 +139,7 @@ impl Opt8n {
             timestamp: U256::from(block.header.timestamp),
             difficulty: block.header.difficulty,
             gas_limit: U256::from(block.header.gas_limit),
-            prevrandao: None,
+            prevrandao: Some(block.header.mix_hash),
             basefee: U256::from(block.header.base_fee_per_gas.unwrap_or_default()),
             blob_excess_gas_and_price,
         };
@@ -149,7 +149,7 @@ impl Opt8n {
             .with_block_env(block_env)
             .optimism()
             .build();
-        println!("Block number aa: {}", block.header.number);
+
         println!("Transactions length: {}", block.transactions.len());
         for tx in block.transactions.iter() {
             let tx_env = to_revm_tx_env(tx.transaction.clone())?;
@@ -181,9 +181,14 @@ impl Opt8n {
     }
 
     pub async fn dump_execution_fixture(&mut self) -> Result<()> {
-        println!("txs: {:?}", self.execution_fixture.transactions.len());
         // Reset the fork
-        let _ = self.eth_api.backend.reset_fork(self.fork.clone()).await;
+        self.eth_api.anvil_reset(self.fork.clone()).await?;
+
+        // // TODO: spawn the node again
+        // let (eth_api, node_handle) = anvil::spawn(self.node_config.clone()).await;
+        // self.eth_api = eth_api;
+        // self.node_handle = node_handle;
+
         let pool_txs = self
             .execution_fixture
             .transactions
@@ -201,15 +206,9 @@ impl Opt8n {
             })
             .collect::<Vec<Arc<_>>>();
 
-        println!("pool txs: {:?}", pool_txs);
-
         let mined_block = self.eth_api.backend.mine_block(pool_txs).await;
 
-        dbg!("mined block", &mined_block);
-
         if let Some(block) = self.eth_api.backend.get_block(mined_block.block_number) {
-            println!("block: {:?}", block);
-
             // TODO: collect into futures ordered
             let mut receipts: Vec<ExecutionReceipt> = vec![];
             // TODO: This could be done in 1 loop instead of 2
