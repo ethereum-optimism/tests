@@ -51,11 +51,16 @@ impl Opt8n {
         let node_config = node_config.unwrap_or_default().with_optimism(true);
         let (eth_api, node_handle) = anvil::spawn(node_config).await;
 
+        // TODO: unwrap the fork or, set it to the current vlaues for the node
+        let fork = fork.unwrap_or(Forking {
+            block_number: Some(0),
+            json_rpc_url: Some(node_handle.http_endpoint()),
+        });
         Self {
             eth_api,
             node_handle,
             execution_fixture: ExecutionFixture::default(),
-            fork: fork.unwrap_or_default(),
+            fork,
             output_file,
         }
     }
@@ -191,7 +196,7 @@ impl Opt8n {
                     pending_transaction: pending_tx,
                     requires: vec![],
                     provides: vec![],
-                    priority: TransactionPriority(gas_price),
+                    priority: TransactionPriority(0),
                 })
             })
             .collect::<Vec<Arc<_>>>();
