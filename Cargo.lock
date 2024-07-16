@@ -4453,7 +4453,7 @@ dependencies = [
  "forge-script",
  "futures",
  "op-test-vectors",
- "revm 11.0.0",
+ "revm",
  "serde",
  "serde_json",
  "shellwords",
@@ -5183,6 +5183,9 @@ version = "10.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "355bde4e21578c241f9379fbb344a73d254969b5007239115e094dda1511cd34"
 dependencies = [
+ "alloy-eips",
+ "alloy-provider",
+ "alloy-transport",
  "auto_impl",
  "cfg-if",
  "dyn-clone",
@@ -5190,6 +5193,7 @@ dependencies = [
  "revm-precompile 8.0.0",
  "serde",
  "serde_json",
+ "tokio",
 ]
 
 [[package]]
