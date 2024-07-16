@@ -8,6 +8,7 @@ use alloy::{
             GethDebugBuiltInTracerType, GethDebugTracerType, GethDebugTracingOptions, GethTrace,
             PreStateConfig, PreStateFrame,
         },
+        Block, BlockId,
     },
 };
 use anvil::{
@@ -23,9 +24,9 @@ use clap::{CommandFactory, FromArgMatches, Parser};
 use color_eyre::eyre::Result;
 use futures::StreamExt;
 use op_test_vectors::execution::{ExecutionFixture, ExecutionReceipt, ExecutionResult};
+use revm::db::AlloyDB;
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, BufReader};
-
 pub struct Opt8n {
     pub eth_api: EthApi,
     pub node_handle: NodeHandle,
@@ -108,7 +109,9 @@ impl Opt8n {
     }
 
     /// Updates the pre and post state allocations of the [ExecutionFixture].
-    pub async fn update_alloc(&mut self, transactions: &Vec<TypedTransaction>) -> Result<()> {
+    pub async fn update_alloc(&mut self, block: &Block) -> Result<()> {
+        let revm_db = AlloyDB::new(self.node_handle.http_provider(), BlockId::latest());
+
         // TODO: Make this concurrent
         for transaction in transactions {
             if let GethTrace::PreStateTracer(PreStateFrame::Diff(frame)) = self
@@ -182,7 +185,7 @@ impl Opt8n {
                 }
             }
 
-            self.update_alloc(&ordered_txs).await?;
+            self.update_alloc(&block).await?;
 
             let block_header = &block.header;
             let execution_result = ExecutionResult {
