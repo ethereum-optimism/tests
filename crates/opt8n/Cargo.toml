@@ -19,3 +19,4 @@ anvil-core = { workspace = true }
 cast = { workspace = true }
 forge-script = { workspace = true }
 revm = { workspace = true }
+revm-inspectors = { workspace = true }

@@ -4454,6 +4454,7 @@ dependencies = [
  "futures",
  "op-test-vectors",
  "revm",
+ "revm-inspectors",
  "serde",
  "serde_json",
  "shellwords",

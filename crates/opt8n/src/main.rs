@@ -1,5 +1,5 @@
+pub mod evm;
 pub mod opt8n;
-
 use std::path::PathBuf;
 
 use alloy::rpc::types::anvil::Forking;

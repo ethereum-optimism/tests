@@ -1,5 +1,4 @@
-use std::{fs, path::PathBuf, sync::Arc};
-
+use crate::evm::to_revm_tx_env;
 use alloy::{
     primitives::B256,
     rpc::types::{
@@ -8,9 +7,10 @@ use alloy::{
             GethDebugBuiltInTracerType, GethDebugTracerType, GethDebugTracingOptions, GethTrace,
             PreStateConfig, PreStateFrame,
         },
-        Block, BlockId,
+        BlockId,
     },
 };
+
 use anvil::{
     cmd::NodeArgs,
     eth::{
@@ -19,12 +19,19 @@ use anvil::{
     },
     NodeConfig, NodeHandle,
 };
-use anvil_core::eth::transaction::{PendingTransaction, TypedTransaction};
+use anvil_core::{
+    eth::block::Block,
+    eth::transaction::{PendingTransaction, TypedTransaction},
+};
+use cast::traces::{GethTraceBuilder, TracingInspectorConfig};
+use std::{fs, path::PathBuf, sync::Arc};
+
 use clap::{CommandFactory, FromArgMatches, Parser};
 use color_eyre::eyre::Result;
 use futures::StreamExt;
 use op_test_vectors::execution::{ExecutionFixture, ExecutionReceipt, ExecutionResult};
-use revm::db::AlloyDB;
+use revm::primitives::{BlobExcessGasAndPrice, TxEnv, U256};
+use revm::{db::AlloyDB, primitives::BlockEnv, EvmBuilder};
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, BufReader};
 pub struct Opt8n {
@@ -109,41 +116,58 @@ impl Opt8n {
     }
 
     /// Updates the pre and post state allocations of the [ExecutionFixture].
-    pub async fn update_alloc(&mut self, block: &Block) -> Result<()> {
-        let revm_db = AlloyDB::new(self.node_handle.http_provider(), BlockId::latest());
+    pub fn update_alloc(&mut self, block: &Block) -> Result<()> {
+        let revm_db = AlloyDB::new(
+            self.node_handle.http_provider(),
+            BlockId::from(block.header.number - 1),
+        );
 
-        // TODO: Make this concurrent
-        for transaction in transactions {
-            if let GethTrace::PreStateTracer(PreStateFrame::Diff(frame)) = self
-                .eth_api
-                .backend
-                .debug_trace_transaction(
-                    transaction.hash(),
-                    GethDebugTracingOptions {
-                        tracer: Some(GethDebugTracerType::BuiltInTracer(
-                            GethDebugBuiltInTracerType::PreStateTracer,
-                        )),
-                        ..Default::default()
-                    }
-                    .with_prestate_config(PreStateConfig {
+        let blob_excess_gas_and_price = if let Some(excess_gas) = block.header.excess_blob_gas {
+            Some(BlobExcessGasAndPrice::new(excess_gas as u64))
+        } else {
+            None
+        };
+
+        let block_env = BlockEnv {
+            number: U256::from(block.header.number),
+            coinbase: block.header.beneficiary,
+            timestamp: U256::from(block.header.timestamp),
+            difficulty: block.header.difficulty,
+            gas_limit: U256::from(block.header.gas_limit),
+            prevrandao: None,
+            basefee: U256::from(block.header.base_fee_per_gas.unwrap_or_default()),
+            blob_excess_gas_and_price,
+        };
+
+        let mut evm = EvmBuilder::default()
+            .with_ref_db(Box::new(revm_db))
+            .with_block_env(block_env)
+            .optimism()
+            .build();
+
+        for tx in block.transactions.iter() {
+            let tx_env = to_revm_tx_env(tx.transaction.clone())?;
+            evm.context.evm.env.tx = tx_env;
+            let result = evm.transact()?;
+            let db = evm.context.evm.db.0.clone();
+            let pre_state_frame = GethTraceBuilder::new(vec![], TracingInspectorConfig::default())
+                .geth_prestate_traces(
+                    &result,
+                    PreStateConfig {
                         diff_mode: Some(true),
-                    }),
-                )
-                .await?
-            {
-                frame.pre.into_iter().for_each(|(address, account)| {
-                    self.execution_fixture
-                        .alloc
-                        .entry(address)
-                        .or_insert(account);
-                });
+                    },
+                    db,
+                )?;
 
-                frame.post.into_iter().for_each(|(address, account)| {
-                    self.execution_fixture.out_alloc.insert(address, account);
+            if let PreStateFrame::Diff(diff) = pre_state_frame {
+                diff.pre.into_iter().for_each(|(account, state)| {
+                    self.execution_fixture.alloc.entry(account).or_insert(state);
+                });
+                diff.post.into_iter().for_each(|(account, state)| {
+                    self.execution_fixture.out_alloc.insert(account, state);
                 });
             }
         }
-
         Ok(())
     }
 
@@ -185,7 +209,7 @@ impl Opt8n {
                 }
             }
 
-            self.update_alloc(&block).await?;
+            self.update_alloc(&block)?;
 
             let block_header = &block.header;
             let execution_result = ExecutionResult {
