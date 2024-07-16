@@ -144,11 +144,13 @@ impl Opt8n {
             .with_block_env(block_env)
             .optimism()
             .build();
-
+        println!("Block number aa: {}", block.header.number);
+        println!("Transactions length: {}", block.transactions.len());
         for tx in block.transactions.iter() {
             let tx_env = to_revm_tx_env(tx.transaction.clone())?;
             evm.context.evm.env.tx = tx_env;
             let result = evm.transact()?;
+            println!("{:?}", result);
             let db = evm.context.evm.db.0.clone();
             let pre_state_frame = GethTraceBuilder::new(vec![], TracingInspectorConfig::default())
                 .geth_prestate_traces(
@@ -158,6 +160,8 @@ impl Opt8n {
                     },
                     db,
                 )?;
+
+            println!("Pre state: {:?}", pre_state_frame);
 
             if let PreStateFrame::Diff(diff) = pre_state_frame {
                 diff.pre.into_iter().for_each(|(account, state)| {
@@ -172,6 +176,7 @@ impl Opt8n {
     }
 
     pub async fn dump_execution_fixture(&mut self) -> Result<()> {
+        println!("txs: {:?}", self.execution_fixture.transactions.len());
         // Reset the fork
         let _ = self.eth_api.backend.reset_fork(self.fork.clone()).await;
         let pool_txs = self
@@ -191,8 +196,15 @@ impl Opt8n {
             })
             .collect::<Vec<Arc<_>>>();
 
+        println!("pool txs: {:?}", pool_txs);
+
         let mined_block = self.eth_api.backend.mine_block(pool_txs).await;
+
+        dbg!("mined block", &mined_block);
+
         if let Some(block) = self.eth_api.backend.get_block(mined_block.block_number) {
+            println!("block: {:?}", block);
+
             // TODO: collect into futures ordered
             let mut receipts: Vec<ExecutionReceipt> = vec![];
             // TODO: This could be done in 1 loop instead of 2

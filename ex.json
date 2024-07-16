@@ -3,9 +3,9 @@
     "currentCoinbase": "0x0000000000000000000000000000000000000000",
     "currentDifficulty": "0x0",
     "currentGasLimit": "0x1c9c380",
-    "previousHash": "0xd9ee094eebd331f8d08ec8ad9e691907e7fca61f32896e571883d55931795276",
+    "previousHash": "0x403f39d29ea4e730e8b089019bffb0ef3df82d12d9b0a630d74dfd4fa8b8d9ee",
     "currentNumber": "0x2",
-    "currentTimestamp": "0x6695ecdd"
+    "currentTimestamp": "0x6695ef9e"
   },
   "alloc": {},
   "out_alloc": {},
