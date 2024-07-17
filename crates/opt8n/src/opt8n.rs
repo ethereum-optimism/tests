@@ -188,7 +188,7 @@ impl Opt8n {
         for tx in block.transactions.iter() {
             let tx_env = to_revm_tx_env(tx.transaction.clone())?;
             evm.context.evm.env.tx = tx_env;
-            let result = evm.transact().expect("Failed to transact");
+            let result = evm.transact()?;
             println!("{:?}", result);
             let db = evm.context.evm.db.0.clone();
             let pre_state_frame = GethTraceBuilder::new(vec![], TracingInspectorConfig::default())
