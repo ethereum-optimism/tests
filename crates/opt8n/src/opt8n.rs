@@ -76,7 +76,6 @@ impl Opt8n {
             fork,
             node_config,
             output_file,
-            revm_db: todo!(),
         }
     }
 
