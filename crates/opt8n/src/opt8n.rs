@@ -46,28 +46,31 @@ impl Opt8n {
         output_file: PathBuf,
         genesis: Option<PathBuf>,
     ) -> Self {
-        let mut node_config = node_config.unwrap_or_default().with_optimism(true);
-        node_config.no_mining = true;
-        node_config.genesis = genesis.as_ref().map(|path| {
-            serde_json::from_reader(File::open(path).expect("Invalid path"))
-                .expect("Invalid genesis")
-        });
+        let genesis = if let Some(path) = genesis.as_ref() {
+            Some(
+                serde_json::from_reader(File::open(path).expect("TODO: handle error Invalid path"))
+                    .expect("TODO: handle error Invalid genesis"),
+            )
+        } else {
+            None
+        };
+
+        let node_config = node_config
+            .unwrap_or_default()
+            .with_optimism(true)
+            .with_no_mining(true)
+            .with_genesis(genesis);
+
         let (eth_api, node_handle) = anvil::spawn(node_config.clone()).await;
 
-        let mut this = Self {
+        Self {
             eth_api,
             node_handle,
             execution_fixture: ExecutionFixture::default(),
             fork,
             node_config,
             output_file,
-        };
-        if let Some(_) = genesis {
-            this.dump_state_anvil(true)
-                .await
-                .expect("Failed to dump pre state");
         }
-        this
     }
 
     /// Listens for commands, and new blocks from the block stream.
