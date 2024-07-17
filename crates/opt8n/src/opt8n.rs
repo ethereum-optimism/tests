@@ -65,10 +65,6 @@ impl Opt8n {
 
         let (eth_api, node_handle) = anvil::spawn(node_config.clone()).await;
 
-        // let anvil_endpoint = anvil.endpoint();
-        // let http_provider = ProviderBuilder::new().on_http(anvil_endpoint);
-        // let revm_db = AlloyDB::new(http_provider, BlockId::latest());
-
         Self {
             eth_api,
             node_handle,
