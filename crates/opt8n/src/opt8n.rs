@@ -89,7 +89,7 @@ impl Opt8n {
                 new_block = new_blocks.next() => {
                     if let Some(new_block) = new_block {
                         if let Some(block) = self.eth_api.backend.get_block_by_hash(new_block.hash) {
-                            self.dump_execution_fixture(block).await?;
+                            self.generate_execution_fixture(block).await?;
                         }
                     }
                 }
@@ -130,7 +130,7 @@ impl Opt8n {
     }
 
     /// Dumps the account state of the anvil database into the [ExecutionFixture].
-    pub async fn dump_state_anvil(&mut self, pre_state: bool) -> Result<()> {
+    pub async fn dump_anvil_state(&mut self) -> Result<HashMap<Address, AccountState>> {
         let snapshot = self.eth_api.backend.serialized_state().await?;
         let state = snapshot
             .accounts
@@ -152,16 +152,11 @@ impl Opt8n {
             })
             .collect::<HashMap<Address, AccountState>>();
 
-        if pre_state {
-            self.execution_fixture.alloc = state;
-        } else {
-            self.execution_fixture.out_alloc = state;
-        }
-        Ok(())
+        Ok(state)
     }
 
     /// Updates the pre and post state allocations of the [ExecutionFixture] from Revm.
-    pub fn dump_state_revm(&mut self, block: &Block) -> Result<()> {
+    pub fn capture_pre_post_alloc(&mut self, block: &Block) -> Result<()> {
         let revm_db = AlloyDB::new(
             self.node_handle.http_provider(),
             BlockId::from(block.header.number - 1),
@@ -221,13 +216,10 @@ impl Opt8n {
         self.eth_api.mine_one().await;
     }
 
-    pub async fn dump_execution_fixture(&mut self, block: Block) -> Result<()> {
-        if let Some(_) = self.node_config.genesis {
-            self.dump_state_anvil(false).await?;
-        } else {
-            self.dump_state_revm(&block)?;
-        }
-        // TODO: collect into futures ordered
+    pub async fn generate_execution_fixture(&mut self, block: Block) -> Result<()> {
+        self.dump_anvil_state().await?;
+        self.capture_pre_post_alloc(&block)?;
+
         let mut receipts: Vec<ExecutionReceipt> = vec![];
         // TODO: This could be done in 1 loop instead of 2
         let transactions = block
@@ -258,9 +250,9 @@ impl Opt8n {
         self.execution_fixture.env = block.into();
         self.execution_fixture.result = execution_result;
 
-        assert!(
-            self.execution_fixture.alloc != self.execution_fixture.out_alloc,
-            "Pre and post state allocations are the same"
+        assert_ne!(
+            self.execution_fixture.alloc, self.execution_fixture.out_alloc,
+            "Pre and post state are the same"
         );
 
         // Output the execution fixture to file
