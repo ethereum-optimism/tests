@@ -4454,7 +4454,7 @@ dependencies = [
  "futures",
  "op-alloy-rpc-types",
  "op-test-vectors",
- "revm",
+ "revm 10.0.0",
  "revm-inspectors",
  "serde",
  "serde_json",
@@ -5199,6 +5199,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "revm"
+version = "11.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "44102920a77b38b0144f4b84dcaa31fe44746e78f53685c2ca0149af5312e048"
+dependencies = [
+ "auto_impl",
+ "cfg-if",
+ "dyn-clone",
+ "revm-interpreter 7.0.0",
+ "revm-precompile 9.0.0",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "revm-inspectors"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5242,6 +5257,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1c669c9b105dbb41133c17bf7f34d29368e358a7fee8fcc289e90dbfb024dfc4"
 dependencies = [
  "aurora-engine-modexp",
+ "blst",
  "c-kzg",
  "k256",
  "once_cell",
