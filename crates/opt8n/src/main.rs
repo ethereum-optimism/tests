@@ -1,5 +1,5 @@
+pub mod evm;
 pub mod opt8n;
-
 use std::path::PathBuf;
 
 use alloy::rpc::types::anvil::Forking;
@@ -18,6 +18,8 @@ pub struct Args {
     pub node_args: NodeArgs,
     #[clap(short, long, help = "Output file for the execution test fixture")]
     pub output: PathBuf,
+    #[clap(short, long, help = "A path to a Genesis state")]
+    pub genesis: Option<PathBuf>,
 }
 
 #[derive(Parser, Clone, Debug)]
@@ -45,7 +47,7 @@ async fn main() -> eyre::Result<()> {
     });
 
     let node_config = args.node_args.into_node_config();
-    let mut opt8n = Opt8n::new(Some(node_config), forking, args.output).await;
+    let mut opt8n = Opt8n::new(Some(node_config), forking, args.output, args.genesis).await;
 
     match args.command {
         Commands::Repl {} => {
@@ -60,7 +62,7 @@ async fn main() -> eyre::Result<()> {
             // ))?;
             // utils::block_on(cmd.run_script())
 
-            opt8n.dump_execution_fixture().await?;
+            opt8n.mine_block().await;
         }
     }
 

@@ -4452,8 +4452,10 @@ dependencies = [
  "color-eyre",
  "forge-script",
  "futures",
+ "op-alloy-rpc-types",
  "op-test-vectors",
  "revm",
+ "revm-inspectors",
  "serde",
  "serde_json",
  "shellwords",
@@ -5191,25 +5193,6 @@ dependencies = [
  "dyn-clone",
  "revm-interpreter 6.0.0",
  "revm-precompile 8.0.0",
- "serde",
- "serde_json",
- "tokio",
-]
-
-[[package]]
-name = "revm"
-version = "11.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44102920a77b38b0144f4b84dcaa31fe44746e78f53685c2ca0149af5312e048"
-dependencies = [
- "alloy-eips",
- "alloy-provider",
- "alloy-transport",
- "auto_impl",
- "cfg-if",
- "dyn-clone",
- "revm-interpreter 7.0.0",
- "revm-precompile 9.0.0",
  "serde",
  "serde_json",
  "tokio",

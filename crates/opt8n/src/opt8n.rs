@@ -1,40 +1,43 @@
-use std::{fs, path::PathBuf, sync::Arc};
-
 use alloy::{
     eips::BlockId,
     primitives::B256,
     providers::ProviderBuilder,
     rpc::types::{
         anvil::Forking,
-        trace::geth::{
-            GethDebugBuiltInTracerType, GethDebugTracerType, GethDebugTracingOptions, GethTrace,
-            PreStateConfig, PreStateFrame,
-        },
+        trace::geth::{AccountState, PreStateConfig, PreStateFrame},
+        BlockId,
     },
 };
-use anvil::{
-    cmd::NodeArgs,
-    eth::{
-        pool::transactions::{PoolTransaction, TransactionPriority},
-        EthApi,
-    },
-    NodeConfig, NodeHandle,
+
+use anvil::{cmd::NodeArgs, eth::EthApi, NodeConfig, NodeHandle};
+use anvil_core::eth::block::Block;
+use cast::traces::{GethTraceBuilder, TracingInspectorConfig};
+use std::{
+    collections::{BTreeMap, HashMap},
+    fs::{self, File},
+    path::PathBuf,
 };
-use anvil_core::eth::transaction::{PendingTransaction, TypedTransaction};
+
 use clap::{CommandFactory, FromArgMatches, Parser};
 use color_eyre::eyre::Result;
 use futures::StreamExt;
 use op_test_vectors::execution::{ExecutionFixture, ExecutionReceipt, ExecutionResult};
-use revm::db::AlloyDB;
+use revm::{
+    db::AlloyDB,
+    primitives::{Address, BlobExcessGasAndPrice, BlockEnv, U256},
+    EvmBuilder,
+};
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, BufReader};
+
+use crate::evm::to_revm_tx_env;
 
 pub struct Opt8n {
     pub eth_api: EthApi,
     pub node_handle: NodeHandle,
     pub execution_fixture: ExecutionFixture,
-    pub fork: Forking,
-    pub revm_db: AlloyDB,
+    pub fork: Option<Forking>,
+    pub node_config: NodeConfig,
     pub output_file: PathBuf,
 }
 
@@ -43,9 +46,24 @@ impl Opt8n {
         node_config: Option<NodeConfig>,
         fork: Option<Forking>,
         output_file: PathBuf,
+        genesis: Option<PathBuf>,
     ) -> Self {
-        let node_config = node_config.unwrap_or_default().with_optimism(true);
-        let (eth_api, node_handle) = anvil::spawn(node_config).await;
+        let genesis = if let Some(path) = genesis.as_ref() {
+            Some(
+                serde_json::from_reader(File::open(path).expect("TODO: handle error Invalid path"))
+                    .expect("TODO: handle error Invalid genesis"),
+            )
+        } else {
+            None
+        };
+
+        let node_config = node_config
+            .unwrap_or_default()
+            .with_optimism(true)
+            .with_no_mining(true)
+            .with_genesis(genesis);
+
+        let (eth_api, node_handle) = anvil::spawn(node_config.clone()).await;
 
         // let anvil_endpoint = anvil.endpoint();
         // let http_provider = ProviderBuilder::new().on_http(anvil_endpoint);
@@ -55,7 +73,8 @@ impl Opt8n {
             eth_api,
             node_handle,
             execution_fixture: ExecutionFixture::default(),
-            fork: fork.unwrap_or_default(),
+            fork,
+            node_config,
             output_file,
             revm_db: todo!(),
         }
@@ -81,8 +100,7 @@ impl Opt8n {
                     tracing::info!("New block: {:?}", new_block);
                     if let Some(new_block) = new_block {
                         if let Some(block) = self.eth_api.backend.get_block_by_hash(new_block.hash) {
-                            let transactions = block.transactions.into_iter().map(|tx| tx.transaction).collect::<Vec<_>>();
-                            self.execution_fixture.transactions.extend(transactions);
+                            self.generate_execution_fixture(block).await?;
                         }
                     }
                 }
@@ -106,7 +124,9 @@ impl Opt8n {
 
     async fn execute(&mut self, command: ReplCommand) -> Result<()> {
         match command {
-            ReplCommand::Dump => self.dump_execution_fixture().await?,
+            ReplCommand::Dump => {
+                self.mine_block().await;
+            }
             ReplCommand::Anvil { mut args } => {
                 args.insert(0, "anvil".to_string());
                 let command = NodeArgs::command_for_update();
@@ -120,97 +140,131 @@ impl Opt8n {
         Ok(())
     }
 
-    /// Updates the pre and post state allocations of the [ExecutionFixture].
-    pub async fn update_alloc(&mut self, transactions: &Vec<TypedTransaction>) -> Result<()> {
-        // TODO: Make this concurrent
-        for transaction in transactions {
-            if let GethTrace::PreStateTracer(PreStateFrame::Diff(frame)) = self
-                .eth_api
-                .backend
-                .debug_trace_transaction(
-                    transaction.hash(),
-                    GethDebugTracingOptions {
-                        tracer: Some(GethDebugTracerType::BuiltInTracer(
-                            GethDebugBuiltInTracerType::PreStateTracer,
-                        )),
-                        ..Default::default()
-                    }
-                    .with_prestate_config(PreStateConfig {
-                        diff_mode: Some(true),
-                    }),
+    /// Dumps the account state of the anvil database into the [ExecutionFixture].
+    pub async fn dump_anvil_state(&mut self) -> Result<HashMap<Address, AccountState>> {
+        let snapshot = self.eth_api.backend.serialized_state().await?;
+        let state = snapshot
+            .accounts
+            .into_iter()
+            .map(|(k, f)| {
+                (
+                    k,
+                    AccountState {
+                        nonce: Some(f.nonce),
+                        balance: Some(f.balance),
+                        code: Some(f.code.clone()),
+                        storage: f
+                            .storage
+                            .into_iter()
+                            .map(|(k, v)| (B256::from(k), B256::from(v)))
+                            .collect::<BTreeMap<B256, B256>>(),
+                    },
                 )
-                .await?
-            {
-                frame.pre.into_iter().for_each(|(address, account)| {
-                    self.execution_fixture
-                        .alloc
-                        .entry(address)
-                        .or_insert(account);
-                });
+            })
+            .collect::<HashMap<Address, AccountState>>();
 
-                frame.post.into_iter().for_each(|(address, account)| {
-                    self.execution_fixture.out_alloc.insert(address, account);
+        Ok(state)
+    }
+
+    /// Updates the pre and post state allocations of the [ExecutionFixture] from Revm.
+    pub fn capture_pre_post_alloc(&mut self, block: &Block) -> Result<()> {
+        let revm_db = AlloyDB::new(
+            self.node_handle.http_provider(),
+            BlockId::from(block.header.number - 1),
+        );
+
+        let block_env = BlockEnv {
+            number: U256::from(block.header.number),
+            coinbase: block.header.beneficiary,
+            timestamp: U256::from(block.header.timestamp),
+            difficulty: block.header.difficulty,
+            gas_limit: U256::from(block.header.gas_limit),
+            prevrandao: Some(block.header.mix_hash),
+            basefee: U256::from(block.header.base_fee_per_gas.unwrap_or_default()),
+            blob_excess_gas_and_price: block
+                .header
+                .excess_blob_gas
+                .map(|excess_gas| BlobExcessGasAndPrice::new(excess_gas as u64)),
+        };
+
+        let mut evm = EvmBuilder::default()
+            .with_ref_db(Box::new(revm_db))
+            .with_block_env(block_env)
+            .build();
+
+        evm.context.evm.env.cfg.chain_id = self.eth_api.chain_id();
+        println!("Transactions length: {}", block.transactions.len());
+        for tx in block.transactions.iter() {
+            let tx_env = to_revm_tx_env(tx.transaction.clone())?;
+            evm.context.evm.env.tx = tx_env;
+            let result = evm.transact()?;
+            println!("{:?}", result);
+            let db = evm.context.evm.db.0.clone();
+            let pre_state_frame = GethTraceBuilder::new(vec![], TracingInspectorConfig::default())
+                .geth_prestate_traces(
+                    &result,
+                    PreStateConfig {
+                        diff_mode: Some(true),
+                    },
+                    db,
+                )?;
+
+            println!("Pre state: {:?}", pre_state_frame);
+
+            if let PreStateFrame::Diff(diff) = pre_state_frame {
+                diff.pre.into_iter().for_each(|(account, state)| {
+                    self.execution_fixture.alloc.entry(account).or_insert(state);
+                });
+                diff.post.into_iter().for_each(|(account, state)| {
+                    self.execution_fixture.out_alloc.insert(account, state);
                 });
             }
         }
-
         Ok(())
     }
 
-    pub async fn dump_execution_fixture(&mut self) -> Result<()> {
-        // Reset the fork
-        let _ = self.eth_api.backend.reset_fork(self.fork.clone()).await;
-        let pool_txs = self
-            .execution_fixture
+    pub async fn mine_block(&mut self) {
+        self.eth_api.mine_one().await;
+    }
+
+    pub async fn generate_execution_fixture(&mut self, block: Block) -> Result<()> {
+        self.dump_anvil_state().await?;
+        self.capture_pre_post_alloc(&block)?;
+
+        let mut receipts: Vec<ExecutionReceipt> = vec![];
+        // TODO: This could be done in 1 loop instead of 2
+        let transactions = block
             .transactions
             .iter()
             .cloned()
-            .map(|tx| {
-                let gas_price = tx.gas_price();
-                let pending_tx = PendingTransaction::new(tx).expect("Failed to create pending tx");
-                Arc::new(PoolTransaction {
-                    pending_transaction: pending_tx,
-                    requires: vec![],
-                    provides: vec![],
-                    priority: TransactionPriority(gas_price),
-                })
-            })
-            .collect::<Vec<Arc<_>>>();
+            .map(|tx| tx.transaction)
+            .collect::<Vec<_>>();
 
-        let mined_block = self.eth_api.backend.mine_block(pool_txs).await;
-        if let Some(block) = self.eth_api.backend.get_block(mined_block.block_number) {
-            // TODO: collect into futures ordered
-            let mut receipts: Vec<ExecutionReceipt> = vec![];
-            // TODO: This could be done in 1 loop instead of 2
-            let ordered_txs = block
-                .transactions
-                .iter()
-                .cloned()
-                .map(|tx| tx.transaction)
-                .collect::<Vec<_>>();
-
-            for tx in &ordered_txs {
-                if let Some(receipt) = self.eth_api.backend.transaction_receipt(tx.hash()).await? {
-                    receipts.push(receipt.into());
-                }
+        for tx in &transactions {
+            if let Some(receipt) = self.eth_api.backend.transaction_receipt(tx.hash()).await? {
+                receipts.push(receipt.into());
             }
-
-            self.update_alloc(&ordered_txs).await?;
-
-            let block_header = &block.header;
-            let execution_result = ExecutionResult {
-                state_root: block_header.state_root,
-                tx_root: block_header.transactions_root,
-                receipt_root: block_header.receipts_root,
-                // TODO: Update logs hash
-                logs_hash: B256::default(),
-                logs_bloom: block_header.logs_bloom,
-                receipts,
-            };
-
-            self.execution_fixture.env = block.into();
-            self.execution_fixture.result = execution_result;
+            self.execution_fixture.transactions.push(tx.to_owned());
         }
+
+        let block_header = &block.header;
+        let execution_result = ExecutionResult {
+            state_root: block_header.state_root,
+            tx_root: block_header.transactions_root,
+            receipt_root: block_header.receipts_root,
+            // TODO: Update logs hash
+            logs_hash: B256::default(),
+            logs_bloom: block_header.logs_bloom,
+            receipts,
+        };
+
+        self.execution_fixture.env = block.into();
+        self.execution_fixture.result = execution_result;
+
+        assert_ne!(
+            self.execution_fixture.alloc, self.execution_fixture.out_alloc,
+            "Pre and post state are the same"
+        );
 
         // Output the execution fixture to file
         let file = fs::File::create(&self.output_file)?;
