@@ -4452,6 +4452,7 @@ dependencies = [
  "color-eyre",
  "forge-script",
  "futures",
+ "op-alloy-rpc-types",
  "op-test-vectors",
  "revm",
  "revm-inspectors",
