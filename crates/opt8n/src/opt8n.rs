@@ -1,5 +1,7 @@
 use alloy::{
+    eips::BlockId,
     primitives::B256,
+    providers::ProviderBuilder,
     rpc::types::{
         anvil::Forking,
         trace::geth::{AccountState, PreStateConfig, PreStateFrame},
@@ -63,6 +65,10 @@ impl Opt8n {
 
         let (eth_api, node_handle) = anvil::spawn(node_config.clone()).await;
 
+        // let anvil_endpoint = anvil.endpoint();
+        // let http_provider = ProviderBuilder::new().on_http(anvil_endpoint);
+        // let revm_db = AlloyDB::new(http_provider, BlockId::latest());
+
         Self {
             eth_api,
             node_handle,
@@ -70,12 +76,16 @@ impl Opt8n {
             fork,
             node_config,
             output_file,
+            revm_db: todo!(),
         }
     }
 
     /// Listens for commands, and new blocks from the block stream.
     pub async fn repl(&mut self) -> Result<()> {
         let mut new_blocks = self.eth_api.backend.new_block_notifications();
+
+        tracing::info!("Listening");
+
         loop {
             tokio::select! {
                 command = self.receive_command() => {
@@ -87,6 +97,7 @@ impl Opt8n {
                 }
 
                 new_block = new_blocks.next() => {
+                    tracing::info!("New block: {:?}", new_block);
                     if let Some(new_block) = new_block {
                         if let Some(block) = self.eth_api.backend.get_block_by_hash(new_block.hash) {
                             self.generate_execution_fixture(block).await?;
