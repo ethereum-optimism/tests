@@ -163,7 +163,7 @@ impl Opt8n {
             let tx_env = to_revm_tx_env(tx.transaction.clone())?;
             evm.context.evm.env.tx = tx_env;
             let result = evm.transact()?;
-            let mut db = evm.context.evm.db.clone();
+            let db = &mut evm.context.evm.db;
             let pre_state_frame = GethTraceBuilder::new(vec![], TracingInspectorConfig::default())
                 .geth_prestate_traces(
                     &result,
