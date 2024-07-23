@@ -9,6 +9,7 @@ use alloy::{
 
 use anvil::{cmd::NodeArgs, eth::EthApi, NodeConfig, NodeHandle};
 use anvil_core::eth::block::Block;
+use anvil_core::eth::transaction::PendingTransaction;
 use cast::traces::{GethTraceBuilder, TracingInspectorConfig};
 use std::{
     fs::{self, File},
@@ -26,8 +27,6 @@ use revm::{
 };
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, BufReader};
-
-use crate::evm::to_revm_tx_env;
 
 pub struct Opt8n {
     pub eth_api: EthApi,
@@ -160,8 +159,8 @@ impl Opt8n {
 
         evm.context.evm.env.cfg.chain_id = self.eth_api.chain_id();
         for tx in block.transactions.iter() {
-            let tx_env = to_revm_tx_env(tx.transaction.clone())?;
-            evm.context.evm.env.tx = tx_env;
+            let pending = PendingTransaction::new(tx.clone().into())?;
+            evm.context.evm.env.tx = pending.to_revm_tx_env();
             let result = evm.transact()?;
             let db = &mut evm.context.evm.db;
             let pre_state_frame = GethTraceBuilder::new(vec![], TracingInspectorConfig::default())
