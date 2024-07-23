@@ -9,14 +9,7 @@ pub fn to_revm_tx_env(tx: TypedTransaction) -> Result<TxEnv, SignatureError> {
         TxKind::Create
     };
 
-    let max_fee_per_blob_gas = if let Some(max_fee_per_blob_gas) = tx.max_fee_per_blob_gas() {
-        Some(U256::from(max_fee_per_blob_gas))
-    } else {
-        None
-    };
-
     let from = tx.recover()?;
-
     let op_fields: OptimismFields = match &tx {
         TypedTransaction::Deposit(fields) => OptimismFields {
             enveloped_tx: None,
@@ -35,7 +28,7 @@ pub fn to_revm_tx_env(tx: TypedTransaction) -> Result<TxEnv, SignatureError> {
         transact_to,
         data: tx.data().clone(),
         chain_id: tx.chain_id(),
-        max_fee_per_blob_gas,
+        max_fee_per_blob_gas: tx.max_fee_per_blob_gas().map(U256::from),
         access_list: tx.essentials().access_list.flattened(),
         gas_priority_fee: tx.essentials().max_priority_fee_per_gas,
         blob_hashes: tx.essentials().blob_versioned_hashes.unwrap_or_default(),

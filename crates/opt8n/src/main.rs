@@ -53,7 +53,9 @@ async fn main() -> eyre::Result<()> {
         Commands::Repl {} => {
             opt8n.repl().await?;
         }
-        Commands::Script { script_args } => {
+        Commands::Script {
+            script_args: _script_args,
+        } => {
             // TODO: Run foundry script, pass the opt8n anvil instance endpoint to the script
 
             // foundry_common::shell::set_shell(foundry_common::shell::Shell::from_args(
