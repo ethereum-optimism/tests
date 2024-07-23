@@ -2,18 +2,22 @@ use std::collections::HashMap;
 
 use alloy::primitives::{Address, Bloom, B256, U256};
 use alloy::rpc::types::trace::geth::AccountState;
-use op_alloy_consensus::{OpReceiptEnvelope, OpTypedTransaction};
+use alloy::rpc::types::{Log, TransactionReceipt};
+use anvil_core::eth::block::Block;
+use anvil_core::eth::transaction::{TypedReceipt, TypedTransaction};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 pub struct ExecutionFixture {
     pub env: ExecutionEnvironment,
     pub alloc: HashMap<Address, AccountState>,
-    pub txs: Vec<OpTypedTransaction>,
+    pub out_alloc: HashMap<Address, AccountState>,
+    #[serde(rename = "txs")]
+    pub transactions: Vec<TypedTransaction>,
     pub result: ExecutionResult,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ExecutionEnvironment {
     pub current_coinbase: Address,
@@ -26,7 +30,7 @@ pub struct ExecutionEnvironment {
     pub block_hashes: Option<HashMap<U256, B256>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ExecutionResult {
     pub state_root: B256,
@@ -47,7 +51,35 @@ pub struct ExecutionReceipt {
     pub block_hash: B256,
     pub transaction_index: U256,
     #[serde(flatten)]
-    pub op_receipt: OpReceiptEnvelope,
+    pub inner: TypedReceipt<Log>,
+}
+
+impl From<Block> for ExecutionEnvironment {
+    fn from(block: Block) -> Self {
+        Self {
+            current_coinbase: block.header.beneficiary,
+            current_difficulty: block.header.difficulty,
+            current_gas_limit: U256::from(block.header.gas_limit),
+            previous_hash: block.header.parent_hash,
+            current_number: U256::from(block.header.number),
+            current_timestamp: U256::from(block.header.timestamp),
+            block_hashes: None,
+        }
+    }
+}
+
+impl From<TransactionReceipt<TypedReceipt<Log>>> for ExecutionReceipt {
+    fn from(receipt: TransactionReceipt<TypedReceipt<Log>>) -> ExecutionReceipt {
+        ExecutionReceipt {
+            transaction_hash: receipt.transaction_hash,
+            root: receipt.state_root.unwrap_or_default(),
+            contract_address: receipt.contract_address.unwrap_or_default(),
+            gas_used: U256::from(receipt.gas_used),
+            block_hash: receipt.block_hash.unwrap_or_default(),
+            transaction_index: U256::from(receipt.transaction_index.unwrap_or_default()),
+            inner: receipt.inner,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -55,6 +87,7 @@ mod tests {
 
     use super::ExecutionEnvironment;
     use crate::execution::ExecutionResult;
+    use color_eyre::eyre;
     use serde_json::Value;
 
     #[test]
@@ -73,7 +106,7 @@ mod tests {
          }
         "#;
 
-        let env = serde_json::from_str::<ExecutionEnvironment>(&expected_env)?;
+        let env = serde_json::from_str::<ExecutionEnvironment>(expected_env)?;
         let serialized_env = serde_json::to_string(&env)?;
 
         assert_eq!(
