@@ -1,11 +1,9 @@
 use alloy::{
     eips::BlockId,
     primitives::B256,
-    providers::ProviderBuilder,
     rpc::types::{
         anvil::Forking,
-        trace::geth::{AccountState, PreStateConfig, PreStateFrame},
-        BlockId,
+        trace::geth::{PreStateConfig, PreStateFrame},
     },
 };
 
@@ -13,7 +11,6 @@ use anvil::{cmd::NodeArgs, eth::EthApi, NodeConfig, NodeHandle};
 use anvil_core::eth::block::Block;
 use cast::traces::{GethTraceBuilder, TracingInspectorConfig};
 use std::{
-    collections::{BTreeMap, HashMap},
     fs::{self, File},
     path::PathBuf,
 };
@@ -23,9 +20,9 @@ use color_eyre::eyre::Result;
 use futures::StreamExt;
 use op_test_vectors::execution::{ExecutionFixture, ExecutionReceipt, ExecutionResult};
 use revm::{
-    db::AlloyDB,
-    primitives::{Address, BlobExcessGasAndPrice, BlockEnv, U256},
-    EvmBuilder,
+    db::{AlloyDB, CacheDB},
+    primitives::{BlobExcessGasAndPrice, BlockEnv, U256},
+    DatabaseCommit, EvmBuilder,
 };
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, BufReader};
@@ -135,38 +132,12 @@ impl Opt8n {
         Ok(())
     }
 
-    /// Dumps the account state of the anvil database into the [ExecutionFixture].
-    pub async fn dump_anvil_state(&mut self) -> Result<HashMap<Address, AccountState>> {
-        let snapshot = self.eth_api.backend.serialized_state().await?;
-        let state = snapshot
-            .accounts
-            .into_iter()
-            .map(|(k, f)| {
-                (
-                    k,
-                    AccountState {
-                        nonce: Some(f.nonce),
-                        balance: Some(f.balance),
-                        code: Some(f.code.clone()),
-                        storage: f
-                            .storage
-                            .into_iter()
-                            .map(|(k, v)| (B256::from(k), B256::from(v)))
-                            .collect::<BTreeMap<B256, B256>>(),
-                    },
-                )
-            })
-            .collect::<HashMap<Address, AccountState>>();
-
-        Ok(state)
-    }
-
     /// Updates the pre and post state allocations of the [ExecutionFixture] from Revm.
     pub fn capture_pre_post_alloc(&mut self, block: &Block) -> Result<()> {
-        let revm_db = AlloyDB::new(
+        let revm_db = CacheDB::new(AlloyDB::new(
             self.node_handle.http_provider(),
             BlockId::from(block.header.number - 1),
-        );
+        ));
 
         let block_env = BlockEnv {
             number: U256::from(block.header.number),
@@ -183,26 +154,25 @@ impl Opt8n {
         };
 
         let mut evm = EvmBuilder::default()
-            .with_ref_db(Box::new(revm_db))
+            .with_db(Box::new(revm_db))
             .with_block_env(block_env)
             .build();
 
         evm.context.evm.env.cfg.chain_id = self.eth_api.chain_id();
-        println!("Transactions length: {}", block.transactions.len());
         for tx in block.transactions.iter() {
             let tx_env = to_revm_tx_env(tx.transaction.clone())?;
             evm.context.evm.env.tx = tx_env;
             let result = evm.transact()?;
-            println!("{:?}", result);
-            let db = evm.context.evm.db.0.clone();
+            let db = &mut evm.context.evm.db;
             let pre_state_frame = GethTraceBuilder::new(vec![], TracingInspectorConfig::default())
                 .geth_prestate_traces(
                     &result,
                     PreStateConfig {
                         diff_mode: Some(true),
                     },
-                    db,
+                    db.clone(),
                 )?;
+            db.commit(result.state);
 
             println!("Pre state: {:?}", pre_state_frame);
 
@@ -223,7 +193,6 @@ impl Opt8n {
     }
 
     pub async fn generate_execution_fixture(&mut self, block: Block) -> Result<()> {
-        self.dump_anvil_state().await?;
         self.capture_pre_post_alloc(&block)?;
 
         let mut receipts: Vec<ExecutionReceipt> = vec![];

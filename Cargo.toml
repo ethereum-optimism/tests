@@ -29,13 +29,12 @@ op-alloy-consensus = "0.1.2"
 alloy = { version = "0.1.4", features = [
     "rpc",
     "rpc-types-trace",
-    "providers",
+    "providers"
 ] }
 anvil = { git = "https://github.com/foundry-rs/foundry", default-features = true, rev = "7c4482fc9541f11b57575e2d8bf7bd190b61bda6" }
 anvil-core = { git = "https://github.com/foundry-rs/foundry", default-features = true, rev = "7c4482fc9541f11b57575e2d8bf7bd190b61bda6" }
 cast = { git = "https://github.com/foundry-rs/foundry", rev = "7c4482fc9541f11b57575e2d8bf7bd190b61bda6" }
 forge-script = { git = "https://github.com/foundry-rs/foundry", rev = "7c4482fc9541f11b57575e2d8bf7bd190b61bda6" }
-revm-primitives = { version = "5.0.0", default-features = false }
 revm = { version = "10.0.0", features = ["alloydb", "optimism"] }
 revm-inspectors = { version = "0.3", features = ["serde"] }
 
