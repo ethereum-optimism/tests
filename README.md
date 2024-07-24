@@ -36,8 +36,13 @@ Test fixtures can be easily generated using the [opt8n](./crates/opt8n) cli tool
 
 **`op-test-vectors`**
 
-- [`client`](./bin/client): The bare-metal program that runs on top of a [fault proof VM][g-fault-proof-vm].
-- [`host`](./bin/host): The host program that runs natively alongside the FPVM, serving as the [Preimage Oracle][g-preimage-oracle] server.
+- [`execution`](./crates/op-test-vectors/src/execution.rs): Rust types for the execution test fixtures.
+- [`derivation`](./crates/op-test-vectors/src/derivation.rs): Rust types for the derivation test fixtures.
+
+**`opt8n` Commands**
+
+- `repl`: Spins up a REPL that allows the user to send transactions to and generate a test fixture from those transactions.
+- `script`: Executes a forge script against an anvil instance and generates the test fixture.
 
 ## Book
 
