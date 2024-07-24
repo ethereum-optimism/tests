@@ -12,6 +12,7 @@ use color_eyre::eyre;
 /// The execution fixture is the top-level object that contains
 /// everything needed to run an execution test.
 #[derive(Serialize, Deserialize, Debug, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct ExecutionFixture {
     /// The execution environment sets up the current block context.
     pub env: ExecutionEnvironment,

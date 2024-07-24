@@ -29,6 +29,7 @@ op-alloy-consensus = "0.1.2"
 alloy = { version = "0.1.4", features = [
     "rpc",
     "rpc-types-trace",
+    "consensus",
     "providers"
 ] }
 anvil = { git = "https://github.com/foundry-rs/foundry", default-features = true, rev = "7c4482fc9541f11b57575e2d8bf7bd190b61bda6" }
