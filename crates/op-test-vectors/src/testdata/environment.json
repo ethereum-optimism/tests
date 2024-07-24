@@ -1,0 +1,11 @@
+{
+    "currentCoinbase" : "0x2adc25665018aa1fe0e6bc666dac8fc2697ff9ba",
+    "currentDifficulty" : "0x20000",
+    "currentGasLimit" : "0x5f5e100",
+    "currentNumber" : "0x1",
+    "currentTimestamp" : "0x3e8",
+    "previousHash" : "0xe729de3fec21e30bea3d56adb01ed14bc107273c2775f9355afb10f594a10d9e",
+    "blockHashes" : {
+        "0x0" : "0xe729de3fec21e30bea3d56adb01ed14bc107273c2775f9355afb10f594a10d9e"
+    }
+ }
