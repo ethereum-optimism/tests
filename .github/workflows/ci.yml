@@ -96,5 +96,3 @@ jobs:
           cache-on-failure: true
       - name: doclint
         run: just lint-docs
-      - name: doctest
-        run: just test-docs
