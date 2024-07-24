@@ -30,7 +30,7 @@ pub enum Commands {
     #[command(visible_alias = "s")]
     Script {
         #[command(flatten)]
-        script_args: ScriptArgs,
+        script_args: Box<ScriptArgs>,
     },
 }
 

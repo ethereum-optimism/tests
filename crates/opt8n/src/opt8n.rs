@@ -44,14 +44,10 @@ impl Opt8n {
         output_file: PathBuf,
         genesis: Option<PathBuf>,
     ) -> Self {
-        let genesis = if let Some(path) = genesis.as_ref() {
-            Some(
-                serde_json::from_reader(File::open(path).expect("TODO: handle error Invalid path"))
-                    .expect("TODO: handle error Invalid genesis"),
-            )
-        } else {
-            None
-        };
+        let genesis = genesis.as_ref().map(|path| {
+            serde_json::from_reader(File::open(path).expect("TODO: handle error Invalid path"))
+                .expect("TODO: handle error Invalid genesis")
+        });
 
         let node_config = node_config
             .unwrap_or_default()
