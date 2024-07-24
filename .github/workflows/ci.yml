@@ -21,7 +21,6 @@ jobs:
           cache-on-failure: true
       - uses: taiki-e/install-action@nextest
       - name: cargo nextest
-        run: cargo nextest run --release --workspace --all --locked
         run: just test
   cargo-lint:
     runs-on: ubuntu-latest
