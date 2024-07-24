@@ -1,6 +1,6 @@
 # OP Test Vectors Book
 
-_Documentation for op test vectors._
+_Documentation for the op-test-vectors repository._
 
 ## Introduction
 

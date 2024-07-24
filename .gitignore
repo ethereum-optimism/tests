@@ -6,3 +6,6 @@
 
 # Environment Variables
 .env
+
+# MdBook Artifacts
+book/book/

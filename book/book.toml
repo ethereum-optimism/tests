@@ -2,7 +2,7 @@
 authors = ["refcell"]
 language = "en"
 multilingual = false
-src = "book/src"
+src = "src"
 title = "OP Test Vectors"
 
 [preprocessor.mermaid]
