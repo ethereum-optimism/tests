@@ -1,4 +1,3 @@
-pub mod evm;
 pub mod opt8n;
 use std::path::PathBuf;
 
