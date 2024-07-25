@@ -3,9 +3,11 @@ use std::path::PathBuf;
 
 use alloy::rpc::types::anvil::Forking;
 use anvil::cmd::NodeArgs;
+use anvil_core::eth::block;
 use clap::Parser;
 use color_eyre::eyre;
 use forge_script::ScriptArgs;
+use futures::StreamExt;
 use opt8n::Opt8n;
 
 #[derive(Parser, Clone, Debug)]
@@ -58,7 +60,17 @@ async fn main() -> eyre::Result<()> {
                 script_args.json,
             ))?;
 
+            script_args.broadcast = true;
+            script_args.evm_opts.sender = Some(
+                opt8n
+                    .node_handle
+                    .dev_accounts()
+                    .into_iter()
+                    .last()
+                    .expect("Could not get dev account"),
+            );
             script_args.evm_opts.fork_url = Some(opt8n.node_handle.http_endpoint());
+
             opt8n.run_script(script_args).await?;
         }
     }

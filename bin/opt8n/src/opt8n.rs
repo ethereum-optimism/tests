@@ -102,22 +102,30 @@ impl Opt8n {
     /// Run a Forge script with the given arguments, and generate an execution fixture
     /// from the broadcasted transactions.
     pub async fn run_script(&mut self, script_args: Box<ScriptArgs>) -> Result<()> {
-        let mut new_block = self.eth_api.backend.new_block_notifications();
-        self.eth_api.anvil_set_interval_mining(12)?;
+        let mut new_blocks = self.eth_api.backend.new_block_notifications();
 
-        let f = async {
-            let new_block = new_block.next();
-            join!(
-                new_block.into_future(),
-                script_args.run_script().map_err(Error::from)
-            )
-        };
+        // Run the script and compile the transactions and broadcast to the anvil instance
+        let compiled = script_args.preprocess().await?.compile()?;
 
-        if let (Some(new_block), _) = f.await {
-            tracing::info!("New block: {:?}", new_block);
-            if let Some(block) = self.eth_api.backend.get_block_by_hash(new_block.hash) {
-                self.generate_execution_fixture(block).await?;
-            }
+        let pre_simulation = compiled
+            .link()
+            .await?
+            .prepare_execution()
+            .await?
+            .execute()
+            .await?
+            .prepare_simulation()
+            .await?;
+
+        let bundled = pre_simulation.fill_metadata().await?.bundle().await?;
+        bundled.broadcast().await?;
+
+        // Mine the block and generate the execution fixture
+        self.mine_block().await;
+
+        let block = new_blocks.next().await.expect("TODO: handle error");
+        if let Some(block) = self.eth_api.backend.get_block_by_hash(block.hash) {
+            self.generate_execution_fixture(block).await?;
         }
 
         Ok(())
