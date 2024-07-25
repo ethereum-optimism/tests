@@ -46,24 +46,20 @@ async fn main() -> eyre::Result<()> {
     });
 
     let node_config = args.node_args.into_node_config();
-    let mut opt8n = Opt8n::new(Some(node_config), forking, args.output, args.genesis).await;
+    let mut opt8n = Opt8n::new(Some(node_config), forking, args.output, args.genesis).await?;
 
     match args.command {
         Commands::Repl {} => {
             opt8n.repl().await?;
         }
-        Commands::Script {
-            script_args: _script_args,
-        } => {
-            // TODO: Run foundry script, pass the opt8n anvil instance endpoint to the script
+        Commands::Script { mut script_args } => {
+            foundry_common::shell::set_shell(foundry_common::shell::Shell::from_args(
+                script_args.opts.silent,
+                script_args.json,
+            ))?;
 
-            // foundry_common::shell::set_shell(foundry_common::shell::Shell::from_args(
-            //     cmd.opts.silent,
-            //     cmd.json,
-            // ))?;
-            // utils::block_on(cmd.run_script())
-
-            opt8n.mine_block().await;
+            script_args.evm_opts.fork_url = Some(opt8n.node_handle.http_endpoint());
+            opt8n.run_script(script_args).await?;
         }
     }
 
