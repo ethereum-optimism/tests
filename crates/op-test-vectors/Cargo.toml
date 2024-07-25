@@ -7,6 +7,7 @@ homepage.workspace = true
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
+exclude = ["src/testdata"]
 
 [dependencies]
 op-alloy-rpc-types.workspace = true
@@ -14,7 +15,7 @@ op-alloy-consensus.workspace = true
 alloy.workspace = true
 serde.workspace = true
 anvil-core.workspace = true
+color-eyre.workspace = true
 
 [dev-dependencies]
-color-eyre.workspace = true
 serde_json.workspace = true

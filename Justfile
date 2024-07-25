@@ -3,10 +3,15 @@ alias t := test
 alias f := fmt
 alias l := lint
 alias b := build
+alias opt8n := run
 
 # default recipe to display help information
 default:
   @just --list
+
+# Runs opt8n
+run:
+  cargo run --bin opt8n
 
 # Run all tests
 tests: test test-docs

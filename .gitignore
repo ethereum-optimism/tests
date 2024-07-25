@@ -1,1 +1,11 @@
+# MacOS dust
+.DS_Store
+
+# Rust target
 **/target
+
+# Environment Variables
+.env
+
+# MdBook Artifacts
+book/book/

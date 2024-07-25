@@ -11,14 +11,16 @@ use anvil::{cmd::NodeArgs, eth::EthApi, NodeConfig, NodeHandle};
 use anvil_core::eth::block::Block;
 use anvil_core::eth::transaction::PendingTransaction;
 use cast::traces::{GethTraceBuilder, TracingInspectorConfig};
+use forge_script::ScriptArgs;
 use std::{
     fs::{self, File},
+    future::IntoFuture,
     path::PathBuf,
 };
 
 use clap::{CommandFactory, FromArgMatches, Parser};
-use color_eyre::eyre::{ensure, Result};
-use futures::StreamExt;
+use color_eyre::eyre::{Error, Result};
+use futures::{join, StreamExt, TryFutureExt};
 use op_test_vectors::execution::{ExecutionFixture, ExecutionReceipt, ExecutionResult};
 use revm::{
     db::{AlloyDB, CacheDB},
@@ -43,7 +45,7 @@ impl Opt8n {
         fork: Option<Forking>,
         output_file: PathBuf,
         genesis: Option<PathBuf>,
-    ) -> Self {
+    ) -> Result<Self> {
         let genesis = genesis.as_ref().map(|path| {
             serde_json::from_reader(File::open(path).expect("TODO: handle error Invalid path"))
                 .expect("TODO: handle error Invalid genesis")
@@ -56,15 +58,15 @@ impl Opt8n {
             .with_genesis(genesis);
 
         let (eth_api, node_handle) = anvil::spawn(node_config.clone()).await;
-
-        Self {
+        eth_api.anvil_set_logging(false).await?;
+        Ok(Self {
             eth_api,
             node_handle,
             execution_fixture: ExecutionFixture::default(),
             fork,
             node_config,
             output_file,
-        }
+        })
     }
 
     /// Listens for commands, and new blocks from the block stream.
@@ -91,6 +93,30 @@ impl Opt8n {
                         }
                     }
                 }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Run a Forge script with the given arguments, and generate an execution fixture
+    /// from the broadcasted transactions.
+    pub async fn run_script(&mut self, script_args: Box<ScriptArgs>) -> Result<()> {
+        let mut new_block = self.eth_api.backend.new_block_notifications();
+        self.eth_api.anvil_set_interval_mining(12)?;
+
+        let f = async {
+            let new_block = new_block.next();
+            join!(
+                new_block.into_future(),
+                script_args.run_script().map_err(Error::from)
+            )
+        };
+
+        if let (Some(new_block), _) = f.await {
+            tracing::info!("New block: {:?}", new_block);
+            if let Some(block) = self.eth_api.backend.get_block_by_hash(new_block.hash) {
+                self.generate_execution_fixture(block).await?;
             }
         }
 
@@ -168,8 +194,6 @@ impl Opt8n {
                     db.clone(),
                 )?;
             db.commit(result.state);
-
-            println!("Pre state: {:?}", pre_state_frame);
 
             if let PreStateFrame::Diff(diff) = pre_state_frame {
                 diff.pre.into_iter().for_each(|(account, state)| {
