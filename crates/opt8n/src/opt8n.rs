@@ -19,7 +19,7 @@ use std::{
 };
 
 use clap::{CommandFactory, FromArgMatches, Parser};
-use color_eyre::eyre::{Error, Result};
+use color_eyre::eyre::{ensure, Error, Result};
 use futures::{join, StreamExt, TryFutureExt};
 use op_test_vectors::execution::{ExecutionFixture, ExecutionReceipt, ExecutionResult};
 use revm::{
@@ -211,23 +211,24 @@ impl Opt8n {
         self.eth_api.mine_one().await;
     }
 
+    /// Generates an execution fixture from a block.
     pub async fn generate_execution_fixture(&mut self, block: Block) -> Result<()> {
         self.capture_pre_post_alloc(&block)?;
 
-        let mut receipts: Vec<ExecutionReceipt> = vec![];
-        // TODO: This could be done in 1 loop instead of 2
-        let transactions = block
-            .transactions
-            .iter()
-            .cloned()
-            .map(|tx| tx.transaction)
-            .collect::<Vec<_>>();
-
-        for tx in &transactions {
-            if let Some(receipt) = self.eth_api.backend.transaction_receipt(tx.hash()).await? {
+        // Append block transactions and receipts to the execution fixture
+        let mut receipts: Vec<ExecutionReceipt> = Vec::with_capacity(block.transactions.len());
+        for tx in block.transactions.iter() {
+            if let Some(receipt) = self
+                .eth_api
+                .backend
+                .transaction_receipt(tx.transaction.hash())
+                .await?
+            {
                 receipts.push(receipt.try_into()?);
             }
-            self.execution_fixture.transactions.push(tx.to_owned());
+            self.execution_fixture
+                .transactions
+                .push(tx.transaction.clone());
         }
 
         let block_header = &block.header;
@@ -244,8 +245,9 @@ impl Opt8n {
         self.execution_fixture.env = block.into();
         self.execution_fixture.result = execution_result;
 
-        assert_ne!(
-            self.execution_fixture.alloc, self.execution_fixture.out_alloc,
+        // Ensure pre and post states are different
+        ensure!(
+            self.execution_fixture.alloc != self.execution_fixture.out_alloc,
             "Pre and post state are the same"
         );
 
