@@ -1,26 +1,23 @@
 {
-  "transitions": [
-    {
-      "previousBlock": 1,
-      "currentBlock": 2,
-      "blockHash": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-    },
-    {
-      "previousBlock": 2,
-      "currentBlock": 3,
-      "blockHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
-    },
-    {
-      "previousBlock": 3,
-      "currentBlock": 4,
-      "blockHash": "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
-    }
-  ],
   "blocks": [
     {
       "number": 1,
       "hash": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       "timestamp": 102,
+      "transactions": [],
+      "blobs": []
+    },
+    {
+      "number": 2,
+      "hash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "timestamp": 104,
+      "transactions": [],
+      "blobs": []
+    },
+    {
+      "number": 2,
+      "hash": "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "timestamp": 106,
       "transactions": [],
       "blobs": []
     }
