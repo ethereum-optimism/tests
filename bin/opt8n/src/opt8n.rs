@@ -14,13 +14,12 @@ use cast::traces::{GethTraceBuilder, TracingInspectorConfig};
 use forge_script::ScriptArgs;
 use std::{
     fs::{self, File},
-    future::IntoFuture,
     path::PathBuf,
 };
 
 use clap::{CommandFactory, FromArgMatches, Parser};
-use color_eyre::eyre::{ensure, Error, Result};
-use futures::{join, StreamExt, TryFutureExt};
+use color_eyre::eyre::{ensure, Result};
+use futures::StreamExt;
 use op_test_vectors::execution::{ExecutionFixture, ExecutionReceipt, ExecutionResult};
 use revm::{
     db::{AlloyDB, CacheDB},

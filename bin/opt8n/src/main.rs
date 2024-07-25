@@ -3,11 +3,9 @@ use std::path::PathBuf;
 
 use alloy::rpc::types::anvil::Forking;
 use anvil::cmd::NodeArgs;
-use anvil_core::eth::block;
 use clap::Parser;
 use color_eyre::eyre;
 use forge_script::ScriptArgs;
-use futures::StreamExt;
 use opt8n::Opt8n;
 
 #[derive(Parser, Clone, Debug)]
@@ -65,7 +63,6 @@ async fn main() -> eyre::Result<()> {
                 opt8n
                     .node_handle
                     .dev_accounts()
-                    .into_iter()
                     .last()
                     .expect("Could not get dev account"),
             );
