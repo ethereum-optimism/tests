@@ -25,7 +25,7 @@ use op_test_vectors::execution::{ExecutionFixture, ExecutionReceipt, ExecutionRe
 use revm::{
     db::{AlloyDB, CacheDB},
     primitives::{BlobExcessGasAndPrice, BlockEnv, U256},
-    EvmBuilder,
+    DatabaseCommit, EvmBuilder,
 };
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, BufReader};
@@ -155,10 +155,13 @@ impl Opt8n {
 
     /// Updates the pre and post state allocations of the [ExecutionFixture] from Revm.
     pub fn capture_pre_post_alloc(&mut self, block: &Block) -> Result<()> {
-        let revm_db = CacheDB::new(AlloyDB::new(
-            self.node_handle.http_provider(),
-            BlockId::from(block.header.number - 1),
-        ));
+        let revm_db = CacheDB::new(
+            AlloyDB::new(
+                self.node_handle.http_provider(),
+                BlockId::from(block.header.number - 1),
+            )
+            .expect("Could not create AlloyDB"),
+        );
 
         let block_env = BlockEnv {
             number: U256::from(block.header.number),
@@ -191,7 +194,7 @@ impl Opt8n {
                     PreStateConfig {
                         diff_mode: Some(true),
                     },
-                    db.clone(),
+                    &db,
                 )?;
             db.commit(result.state);
 
