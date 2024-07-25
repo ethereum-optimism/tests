@@ -1,5 +1,9 @@
 {
-  "blocks": [
+  "l2OutputRoots": [
+    "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+  ],
+  "l1Blocks": [
     {
       "number": 1,
       "hash": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",

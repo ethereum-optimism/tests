@@ -7,9 +7,12 @@ use serde::{Deserialize, Serialize};
 /// The derivation fixture is the top-level object that contains
 /// everything needed to run a derivation test.
 #[derive(Serialize, Deserialize, Debug, Default, Eq, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct DerivationFixture {
     /// A list of L1 Blocks to derive from.
-    pub blocks: Vec<FixtureBlock>,
+    pub l1_blocks: Vec<FixtureBlock>,
+    /// A list of L2 Output Roots to assert against.
+    pub l2_output_roots: Vec<B256>,
 }
 
 /// A fixture block is a minimal block with associated data including blobs
@@ -33,7 +36,7 @@ pub struct FixtureBlock {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy::primitives::{bytes, b256};
+    use alloy::primitives::{b256, bytes};
 
     fn ref_blocks() -> Vec<FixtureBlock> {
         vec![
@@ -70,11 +73,22 @@ mod tests {
         ]
     }
 
+    fn ref_l2_output_roots() -> Vec<B256> {
+        vec![
+            b256!("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"),
+            b256!("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+        ]
+    }
+
     #[test]
     fn test_derivation_fixture() {
         let fixture_str = include_str!("./testdata/derivation_fixture.json");
         let fixture: DerivationFixture = serde_json::from_str(fixture_str).unwrap();
-        assert_eq!(fixture.blocks, ref_blocks());
+        let expected = DerivationFixture {
+            l1_blocks: ref_blocks(),
+            l2_output_roots: ref_l2_output_roots(),
+        };
+        assert_eq!(fixture, expected);
     }
 
     #[test]
