@@ -1,17 +1,18 @@
 //! Module containing the execution test fixture.
 
-use std::collections::HashMap;
 use alloy::primitives::{Address, Bloom, B256, U256};
 use alloy::rpc::types::trace::geth::AccountState;
 use alloy::rpc::types::{Log, TransactionReceipt};
 use anvil_core::eth::block::Block;
 use anvil_core::eth::transaction::{TypedReceipt, TypedTransaction};
-use serde::{Deserialize, Serialize};
 use color_eyre::eyre;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// The execution fixture is the top-level object that contains
 /// everything needed to run an execution test.
 #[derive(Serialize, Deserialize, Debug, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct ExecutionFixture {
     /// The execution environment sets up the current block context.
     pub env: ExecutionEnvironment,
@@ -33,7 +34,7 @@ pub struct ExecutionFixture {
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ExecutionEnvironment {
-    /// The current block coinbase. 
+    /// The current block coinbase.
     pub current_coinbase: Address,
     /// The current block difficulty.
     pub current_difficulty: U256,
@@ -111,11 +112,19 @@ impl TryFrom<TransactionReceipt<TypedReceipt<Log>>> for ExecutionReceipt {
     fn try_from(receipt: TransactionReceipt<TypedReceipt<Log>>) -> eyre::Result<Self> {
         Ok(Self {
             transaction_hash: receipt.transaction_hash,
-            root: receipt.state_root.ok_or_else(|| eyre::eyre!("missing state root"))?,
+            root: receipt
+                .state_root
+                .ok_or_else(|| eyre::eyre!("missing state root"))?,
             contract_address: receipt.contract_address,
             gas_used: U256::from(receipt.gas_used),
-            block_hash: receipt.block_hash.ok_or_else(|| eyre::eyre!("missing block hash"))?,
-            transaction_index: U256::from(receipt.transaction_index.ok_or_else(|| eyre::eyre!("missing transaction index"))?),
+            block_hash: receipt
+                .block_hash
+                .ok_or_else(|| eyre::eyre!("missing block hash"))?,
+            transaction_index: U256::from(
+                receipt
+                    .transaction_index
+                    .ok_or_else(|| eyre::eyre!("missing transaction index"))?,
+            ),
             inner: receipt.inner,
         })
     }
@@ -129,41 +138,54 @@ mod tests {
     #[test]
     fn test_serialize_execution_environment() {
         let expected_env = include_str!("./testdata/environment.json");
-        let env = serde_json::from_str::<ExecutionEnvironment>(expected_env).expect("failed to parse environment");
+        let env = serde_json::from_str::<ExecutionEnvironment>(expected_env)
+            .expect("failed to parse environment");
         let serialized_env = serde_json::to_string(&env).expect("failed to serialize environment");
-        let serialized_value = serde_json::from_str::<Value>(&serialized_env).expect("failed to parse serialized environment");
-        let expected_value = serde_json::from_str::<Value>(expected_env).expect("failed to parse expected environment");
+        let serialized_value = serde_json::from_str::<Value>(&serialized_env)
+            .expect("failed to parse serialized environment");
+        let expected_value = serde_json::from_str::<Value>(expected_env)
+            .expect("failed to parse expected environment");
         assert_eq!(serialized_value, expected_value);
     }
 
     #[test]
     fn test_serialize_execution_result() {
         let expected_result = include_str!("./testdata/result.json");
-        let execution_result = serde_json::from_str::<ExecutionResult>(expected_result).expect("failed to parse result");
-        let serialized_result = serde_json::to_string(&execution_result).expect("failed to serialize result");
-        let serialized_value = serde_json::from_str::<Value>(&serialized_result).expect("failed to parse serialized result");
-        let expected_value = serde_json::from_str::<Value>(expected_result).expect("failed to parse expected result");
+        let execution_result = serde_json::from_str::<ExecutionResult>(expected_result)
+            .expect("failed to parse result");
+        let serialized_result =
+            serde_json::to_string(&execution_result).expect("failed to serialize result");
+        let serialized_value = serde_json::from_str::<Value>(&serialized_result)
+            .expect("failed to parse serialized result");
+        let expected_value = serde_json::from_str::<Value>(expected_result)
+            .expect("failed to parse expected result");
         assert_eq!(serialized_value, expected_value);
     }
 
     #[test]
     fn test_exec_receipt_try_from_tx_receipt() {
         let tx_receipt_str = include_str!("./testdata/tx_receipt.json");
-        let tx_receipt: TransactionReceipt<TypedReceipt<Log>> = serde_json::from_str(tx_receipt_str).expect("failed to parse tx receipt");
-        let exec_receipt = ExecutionReceipt::try_from(tx_receipt.clone()).expect("failed to convert tx receipt to exec receipt");
+        let tx_receipt: TransactionReceipt<TypedReceipt<Log>> =
+            serde_json::from_str(tx_receipt_str).expect("failed to parse tx receipt");
+        let exec_receipt = ExecutionReceipt::try_from(tx_receipt.clone())
+            .expect("failed to convert tx receipt to exec receipt");
         assert_eq!(exec_receipt.transaction_hash, tx_receipt.transaction_hash);
         assert_eq!(exec_receipt.root, tx_receipt.state_root.unwrap());
         assert_eq!(exec_receipt.contract_address, tx_receipt.contract_address);
         assert_eq!(exec_receipt.gas_used, U256::from(tx_receipt.gas_used));
         assert_eq!(exec_receipt.block_hash, tx_receipt.block_hash.unwrap());
-        assert_eq!(exec_receipt.transaction_index, U256::from(tx_receipt.transaction_index.unwrap()));
+        assert_eq!(
+            exec_receipt.transaction_index,
+            U256::from(tx_receipt.transaction_index.unwrap())
+        );
         assert_eq!(exec_receipt.inner, tx_receipt.inner);
     }
 
     #[test]
     fn test_exec_receipt_try_from_missing_root() {
         let tx_receipt_str = include_str!("./testdata/tx_receipt.json");
-        let mut tx_receipt: TransactionReceipt<TypedReceipt<Log>> = serde_json::from_str(tx_receipt_str).expect("failed to parse tx receipt");
+        let mut tx_receipt: TransactionReceipt<TypedReceipt<Log>> =
+            serde_json::from_str(tx_receipt_str).expect("failed to parse tx receipt");
         tx_receipt.state_root = None;
         let exec_receipt = ExecutionReceipt::try_from(tx_receipt);
         assert!(exec_receipt.is_err());
@@ -172,7 +194,8 @@ mod tests {
     #[test]
     fn test_exec_receipt_try_from_missing_block_hash() {
         let tx_receipt_str = include_str!("./testdata/tx_receipt.json");
-        let mut tx_receipt: TransactionReceipt<TypedReceipt<Log>> = serde_json::from_str(tx_receipt_str).expect("failed to parse tx receipt");
+        let mut tx_receipt: TransactionReceipt<TypedReceipt<Log>> =
+            serde_json::from_str(tx_receipt_str).expect("failed to parse tx receipt");
         tx_receipt.block_hash = None;
         let exec_receipt = ExecutionReceipt::try_from(tx_receipt);
         assert!(exec_receipt.is_err());
@@ -181,7 +204,8 @@ mod tests {
     #[test]
     fn test_exec_receipt_try_from_missing_tx_index() {
         let tx_receipt_str = include_str!("./testdata/tx_receipt.json");
-        let mut tx_receipt: TransactionReceipt<TypedReceipt<Log>> = serde_json::from_str(tx_receipt_str).expect("failed to parse tx receipt");
+        let mut tx_receipt: TransactionReceipt<TypedReceipt<Log>> =
+            serde_json::from_str(tx_receipt_str).expect("failed to parse tx receipt");
         tx_receipt.transaction_index = None;
         let exec_receipt = ExecutionReceipt::try_from(tx_receipt);
         assert!(exec_receipt.is_err());
