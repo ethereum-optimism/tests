@@ -103,7 +103,7 @@ impl Opt8n {
     pub async fn run_script(&mut self, script_args: Box<ScriptArgs>) -> Result<()> {
         let mut new_blocks = self.eth_api.backend.new_block_notifications();
 
-        // Run the script and compile the transactions and broadcast to the anvil instance
+        // Run the script, compile the transactions and broadcast to the anvil instance
         let compiled = script_args.preprocess().await?.compile()?;
 
         let pre_simulation = compiled
