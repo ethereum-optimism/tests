@@ -62,10 +62,11 @@ async fn main() -> eyre::Result<()> {
             script_args.evm_opts.sender = Some(
                 opt8n
                     .node_handle
-                    .dev_accounts()
+                    .genesis_accounts()
                     .last()
-                    .expect("Could not get dev account"),
+                    .expect("Could not get genesis account"),
             );
+            script_args.unlocked = true;
             script_args.evm_opts.fork_url = Some(opt8n.node_handle.http_endpoint());
 
             opt8n.run_script(script_args).await?;
