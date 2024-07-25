@@ -1,17 +1,18 @@
 [workspace]
-members = ["crates/op-test-vectors", "crates/opt8n"]
+members = ["crates/*", "bin/opt8n"]
+default-members = ["bin/opt8n"]
 resolver = "2"
 
 [workspace.package]
-version = "0.0.1"
-authors = ["Eric Woolsey<ewoolsey@ualberta.ca>"]
 edition = "2021"
 license = "MIT"
+authors = ["Eric Woolsey<ewoolsey@ualberta.ca>", "refcell"]
 repository = "https://github.com/ethereum-optimism/op-test-vectors"
 homepage = "https://github.com/ethereum-optimism/op-test-vectors"
 exclude = ["**/target", "benches/", "tests"]
 
 [workspace.dependencies]
+# General
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "1"
