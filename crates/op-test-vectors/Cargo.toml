@@ -1,13 +1,13 @@
 [package]
 name = "op-test-vectors"
 description = "Types for test vectors"
+version = "0.0.1"
+exclude = ["src/testdata"]
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
-version.workspace = true
 authors.workspace = true
 edition.workspace = true
-exclude = ["src/testdata"]
 
 [dependencies]
 op-alloy-rpc-types.workspace = true
