@@ -1,0 +1,25 @@
+{
+  "number": 1,
+  "hash": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "timestamp": 102,
+  "transactions": [
+    {
+      "EIP1559": {
+        "chainId": "0x7a69",
+        "nonce": "0x0",
+        "gasLimit": "0x5209",
+        "maxFeePerGas": "0x77359401",
+        "maxPriorityFeePerGas": "0x1",
+        "to": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+        "value": "0x56bc75e2d63100000",
+        "accessList": [],
+        "input": "0x",
+        "r": "0x4416fc558f436f5a3ced5da306c42f0452bcd46d4eee53191f73c40b0f2a30e4",
+        "s": "0x1a26caac6c8da9e7a47d4281ecd5a3d14fdd6a19706b556621a601ce3d88081a",
+        "yParity": "0x1",
+        "hash": "0x15c024c73a94142e42770f9af732e3c169fd9f25d831a5f24db2df0fe99188bf"
+      }
+    }
+  ],
+  "blobs": []
+}
