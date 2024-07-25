@@ -12,6 +12,7 @@ use anvil_core::eth::block::Block;
 use anvil_core::eth::transaction::PendingTransaction;
 use cast::traces::{GethTraceBuilder, TracingInspectorConfig};
 use forge_script::ScriptArgs;
+use inquire::InquireError;
 use std::{
     fs::{self, File},
     future::IntoFuture,
@@ -28,7 +29,6 @@ use revm::{
     DatabaseCommit, EvmBuilder,
 };
 use serde::{Deserialize, Serialize};
-use tokio::io::{AsyncBufReadExt, BufReader};
 
 pub struct Opt8n {
     pub eth_api: EthApi,
@@ -80,8 +80,18 @@ impl Opt8n {
                 command = self.receive_command() => {
                     match command {
                         Ok(ReplCommand::Exit) => break,
-                        Ok(command) => self.execute(command).await?,
-                        Err(e) => eprintln!("Error: {:?}", e),
+                        Ok(command) => {
+                            if let Err(r) = self.execute(command).await {
+                                eprintln!("{:?}", r);
+                            }
+                        },
+                        Err(e) => {
+                            eprintln!("{:?}", e);
+                            // This happens with ctrl-c
+                            if e.downcast_ref::<InquireError>().is_some() {
+                                break
+                            }
+                        },
                     }
                 }
 
@@ -124,11 +134,12 @@ impl Opt8n {
     }
 
     async fn receive_command(&self) -> Result<ReplCommand> {
-        let line = BufReader::new(tokio::io::stdin())
-            .lines()
-            .next_line()
-            .await?
-            .unwrap();
+        let line = tokio::task::spawn_blocking(|| {
+            inquire::Text::new("Enter a command")
+                .with_help_message("'help' for more information")
+                .prompt()
+        })
+        .await??;
         let words = shellwords::split(&line)?;
 
         let matches = ReplCommand::command().try_get_matches_from(words)?;

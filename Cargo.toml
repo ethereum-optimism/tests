@@ -23,6 +23,7 @@ tokio = { version = "1", features = ["full"] }
 futures = "0.3"
 clap = { version = "4", features = ["derive"] }
 shellwords = "1"
+inquire = "0.7"
 
 # Eth
 op-alloy-rpc-types = "0.1.2"
@@ -31,7 +32,7 @@ alloy = { version = "0.1.4", features = [
     "rpc",
     "rpc-types-trace",
     "consensus",
-    "providers"
+    "providers",
 ] }
 foundry-common = { git = "https://github.com/foundry-rs/foundry", default-features = true, rev = "7c4482fc9541f11b57575e2d8bf7bd190b61bda6" }
 anvil = { git = "https://github.com/foundry-rs/foundry", default-features = true, rev = "7c4482fc9541f11b57575e2d8bf7bd190b61bda6" }
