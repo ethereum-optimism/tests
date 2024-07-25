@@ -25,7 +25,7 @@ use op_test_vectors::execution::{ExecutionFixture, ExecutionReceipt, ExecutionRe
 use revm::{
     db::{AlloyDB, CacheDB},
     primitives::{BlobExcessGasAndPrice, BlockEnv, U256},
-    DatabaseCommit, EvmBuilder,
+    EvmBuilder,
 };
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, BufReader};
