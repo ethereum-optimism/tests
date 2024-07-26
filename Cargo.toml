@@ -1,6 +1,6 @@
 [workspace]
-members = ["crates/*", "bin/opt8n"]
-default-members = ["bin/opt8n"]
+members = ["crates/*", "bin/opt8n", "bin/opd8n"]
+default-members = ["bin/opt8n", "bin/opd8n"]
 resolver = "2"
 
 [workspace.package]
