@@ -1,6 +1,5 @@
 use alloy::{
     eips::BlockId,
-    primitives::B256,
     rpc::types::{
         anvil::Forking,
         trace::geth::{PreStateConfig, PreStateFrame},
@@ -236,8 +235,6 @@ impl Opt8n {
             state_root: block_header.state_root,
             tx_root: block_header.transactions_root,
             receipt_root: block_header.receipts_root,
-            // TODO: Update logs hash
-            logs_hash: B256::default(),
             logs_bloom: block_header.logs_bloom,
             receipts,
         };

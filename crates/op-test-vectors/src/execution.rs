@@ -76,8 +76,6 @@ pub struct ExecutionResult {
     pub tx_root: B256,
     /// The receipt root.
     pub receipt_root: B256,
-    /// The logs hash.
-    pub logs_hash: B256,
     /// The logs bloom.
     pub logs_bloom: Bloom,
     /// A list of execution receipts for each executed transaction.
