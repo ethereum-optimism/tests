@@ -196,6 +196,9 @@ impl Opt8n {
                 node_args.run().await?;
             }
             ReplCommand::Cast { .. } => {}
+            ReplCommand::RpcEndpoint => {
+                println!("{}", self.node_handle.http_endpoint());
+            }
             ReplCommand::Exit => unreachable!(),
         }
         Ok(())
@@ -309,7 +312,7 @@ impl Opt8n {
 }
 
 #[derive(Parser, Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
-#[clap(rename_all = "kebab_case", infer_subcommands = true, multicall = true)]
+#[clap(rename_all = "snake_case", infer_subcommands = true, multicall = true)]
 pub enum ReplCommand {
     #[command(visible_alias = "a")]
     Anvil {
@@ -322,6 +325,7 @@ pub enum ReplCommand {
         args: Vec<String>,
     },
     Dump,
+    RpcEndpoint,
     // TODO: implement clear
     // TODO: implement reset
     #[command(visible_alias = "e")]
