@@ -13,13 +13,12 @@ use cast::traces::{GethTraceBuilder, TracingInspectorConfig};
 use forge_script::ScriptArgs;
 use std::{
     fs::{self, File},
-    future::IntoFuture,
     path::PathBuf,
 };
 
 use clap::{CommandFactory, FromArgMatches, Parser};
-use color_eyre::eyre::{ensure, Error, Result};
-use futures::{join, StreamExt, TryFutureExt};
+use color_eyre::eyre::{ensure, eyre, Result};
+use futures::StreamExt;
 use op_test_vectors::execution::{ExecutionFixture, ExecutionReceipt, ExecutionResult};
 use revm::{
     db::{AlloyDB, CacheDB},
@@ -58,6 +57,7 @@ impl Opt8n {
 
         let (eth_api, node_handle) = anvil::spawn(node_config.clone()).await;
         eth_api.anvil_set_logging(false).await?;
+
         Ok(Self {
             eth_api,
             node_handle,
@@ -72,8 +72,6 @@ impl Opt8n {
     pub async fn repl(&mut self) -> Result<()> {
         let mut new_blocks = self.eth_api.backend.new_block_notifications();
 
-        tracing::info!("Listening");
-
         loop {
             tokio::select! {
                 command = self.receive_command() => {
@@ -85,7 +83,6 @@ impl Opt8n {
                 }
 
                 new_block = new_blocks.next() => {
-                    tracing::info!("New block: {:?}", new_block);
                     if let Some(new_block) = new_block {
                         if let Some(block) = self.eth_api.backend.get_block_by_hash(new_block.hash) {
                             self.generate_execution_fixture(block).await?;
@@ -100,26 +97,77 @@ impl Opt8n {
 
     /// Run a Forge script with the given arguments, and generate an execution fixture
     /// from the broadcasted transactions.
-    pub async fn run_script(&mut self, script_args: Box<ScriptArgs>) -> Result<()> {
-        let mut new_block = self.eth_api.backend.new_block_notifications();
-        self.eth_api.anvil_set_interval_mining(12)?;
+    pub async fn run_script(self, script_args: Box<ScriptArgs>) -> Result<()> {
+        let mut new_blocks = self.eth_api.backend.new_block_notifications();
 
-        let f = async {
-            let new_block = new_block.next();
-            join!(
-                new_block.into_future(),
-                script_args.run_script().map_err(Error::from)
-            )
-        };
+        // Run the forge script and broadcast the transactions to the anvil node
+        let mut opt8n = self.broadcast_transactions(script_args).await?;
 
-        if let (Some(new_block), _) = f.await {
-            tracing::info!("New block: {:?}", new_block);
-            if let Some(block) = self.eth_api.backend.get_block_by_hash(new_block.hash) {
-                self.generate_execution_fixture(block).await?;
-            }
+        // Mine the block and generate the execution fixture
+        opt8n.mine_block().await;
+
+        let block = new_blocks.next().await.expect("TODO: handle error");
+        if let Some(block) = opt8n.eth_api.backend.get_block_by_hash(block.hash) {
+            opt8n.generate_execution_fixture(block).await?;
         }
 
         Ok(())
+    }
+
+    async fn broadcast_transactions(self, script_args: Box<ScriptArgs>) -> Result<Self> {
+        // Run the script, compile the transactions and broadcast to the anvil instance
+        let compiled = script_args.preprocess().await?.compile()?;
+
+        let pre_simulation = compiled
+            .link()
+            .await?
+            .prepare_execution()
+            .await?
+            .execute()
+            .await?
+            .prepare_simulation()
+            .await?;
+
+        let bundled = pre_simulation.fill_metadata().await?.bundle().await?;
+
+        let tx_count = bundled
+            .sequence
+            .sequences()
+            .iter()
+            .fold(0, |sum, sequence| sum + sequence.transactions.len());
+
+        // TODO: break into function
+        let broadcast = bundled.broadcast();
+
+        let opt8n = self;
+
+        let pending_transactions = tokio::task::spawn(async move {
+            loop {
+                let pending_tx_count = opt8n
+                    .eth_api
+                    .txpool_content()
+                    .await
+                    .expect("TODO: handle error")
+                    .pending
+                    .len();
+
+                if pending_tx_count == tx_count {
+                    return opt8n;
+                }
+            }
+        });
+
+        let opt8n = tokio::select! {
+            _ = broadcast => {
+                // TODO: Gracefully handle this error
+                return Err(eyre!("Script failed early"));
+            },
+            opt8n = pending_transactions => {
+                opt8n?
+            }
+        };
+
+        Ok(opt8n)
     }
 
     async fn receive_command(&self) -> Result<ReplCommand> {
@@ -154,10 +202,13 @@ impl Opt8n {
 
     /// Updates the pre and post state allocations of the [ExecutionFixture] from Revm.
     pub fn capture_pre_post_alloc(&mut self, block: &Block) -> Result<()> {
-        let revm_db = CacheDB::new(AlloyDB::new(
-            self.node_handle.http_provider(),
-            BlockId::from(block.header.number - 1),
-        ));
+        let revm_db = CacheDB::new(
+            AlloyDB::new(
+                self.node_handle.http_provider(),
+                BlockId::from(block.header.number - 1),
+            )
+            .expect("Could not create AlloyDB"),
+        );
 
         let block_env = BlockEnv {
             number: U256::from(block.header.number),
@@ -190,7 +241,7 @@ impl Opt8n {
                     PreStateConfig {
                         diff_mode: Some(true),
                     },
-                    db.clone(),
+                    &db,
                 )?;
             db.commit(result.state);
 
