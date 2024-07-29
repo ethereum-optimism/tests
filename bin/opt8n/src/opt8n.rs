@@ -15,10 +15,11 @@ use forge_script::ScriptArgs;
 use std::{
     fs::{self, File},
     path::PathBuf,
+    time::Duration,
 };
 
 use clap::{CommandFactory, FromArgMatches, Parser};
-use color_eyre::eyre::{ensure, Result};
+use color_eyre::eyre::{ensure, eyre, Result};
 use futures::StreamExt;
 use op_test_vectors::execution::{ExecutionFixture, ExecutionReceipt, ExecutionResult};
 use revm::{
@@ -103,6 +104,8 @@ impl Opt8n {
     pub async fn run_script(&mut self, script_args: Box<ScriptArgs>) -> Result<()> {
         let mut new_blocks = self.eth_api.backend.new_block_notifications();
 
+        // script_args.run_script()
+
         // Run the script, compile the transactions and broadcast to the anvil instance
         let compiled = script_args.preprocess().await?.compile()?;
 
@@ -117,7 +120,20 @@ impl Opt8n {
             .await?;
 
         let bundled = pre_simulation.fill_metadata().await?.bundle().await?;
-        bundled.broadcast().await?;
+
+        /*  FIXME: Currently, when broadcasting transactions via bundled state, this logic will
+        wait for transaction receipts before completing. The following logic waits for 1 second to allow the transactions
+        to be broadcasted to the anvil instance before calling `mine_block`. Further changes are needed to make this truly synchronous.
+        */
+        let broadcast = bundled.broadcast();
+        tokio::select! {
+            _ = broadcast => {
+                return Err(eyre!("Script failed early"));
+
+            },
+            _ = tokio::time::sleep(Duration::from_secs(1)) => {
+            }
+        }
 
         // Mine the block and generate the execution fixture
         self.mine_block().await;
