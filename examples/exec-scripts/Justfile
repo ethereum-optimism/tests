@@ -1,6 +1,4 @@
 set positional-arguments
-alias s := scripts
-
 # default recipe to display help information
 default:
   @just --list
@@ -14,16 +12,9 @@ forge-updates:
   @forge clean
   @forge update
 
-# Runs all scripts
-scripts: weth9 
-
-# Runs the weth9 precompile script
-weth9:
-  forge script Weth9Precompile
-
 # Generates all execution test fixtures for scripts in this project
 gen fork_url: install-opt8n forge-updates
-  opt8n --output ../../fixtures/execution/Weth9Precompile.json --fork-url {{fork_url}} script Weth9Precompile
+  just gen-weth9 {{fork_url}}
 
 # Generates the execution test fixture for the weth9 precompile script
 gen-weth9 fork_url: install-opt8n forge-updates
