@@ -234,7 +234,8 @@ impl Opt8n {
 
         let handler_cfg = HandlerCfg {
             spec_id: SpecId::from(self.node_config.hardfork.unwrap_or_default()),
-            is_optimism: true,
+            // @refcell When we set is_optimism true, execution fails here due to "Failed to load enveloped transaction."
+            ..Default::default()
         };
         let cfg_env_with_handler_cfg = CfgEnvWithHandlerCfg {
             cfg_env: env.cfg.clone(),
