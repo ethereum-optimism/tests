@@ -13,46 +13,73 @@ use opt8n::Opt8n;
 pub struct Args {
     #[command(subcommand)]
     pub command: Commands,
-    #[command(flatten)]
-    pub node_args: NodeArgs,
-    #[clap(short, long, help = "Output file for the execution test fixture")]
-    pub output: PathBuf,
-    #[clap(short, long, help = "A path to a Genesis state")]
-    pub genesis: Option<PathBuf>,
 }
 
 #[derive(Parser, Clone, Debug)]
 pub enum Commands {
     /// Starts a REPL for running forge, anvil, and cast commands
     #[command(visible_alias = "r")]
-    Repl {},
+    Repl {
+        #[command(flatten)]
+        opt8n_args: Opt8nArgs,
+    },
     /// Uses a forge script to generate a test vector
     #[command(visible_alias = "s")]
     Script {
         #[command(flatten)]
+        opt8n_args: Opt8nArgs,
+        #[command(flatten)]
         script_args: Box<ScriptArgs>,
     },
+}
+
+impl Commands {
+    fn get_opt8n_args(&self) -> &Opt8nArgs {
+        match self {
+            Commands::Repl { opt8n_args } => opt8n_args,
+            Commands::Script { opt8n_args, .. } => opt8n_args,
+        }
+    }
+}
+
+#[derive(Parser, Clone, Debug)]
+pub struct Opt8nArgs {
+    #[command(flatten)]
+    pub node_args: NodeArgs,
+    #[clap(short, long, help = "Output file for the execution test fixture")]
+    pub output: PathBuf,
+    #[clap(short, long, help = "Path to genesis state")]
+    pub genesis: Option<PathBuf>,
 }
 
 #[tokio::main]
 async fn main() -> eyre::Result<()> {
     color_eyre::install()?;
     let args = Args::parse();
+    let opt8n_args = args.command.get_opt8n_args();
 
-    let evm_options = &args.node_args.evm_opts;
+    let evm_options = &opt8n_args.node_args.evm_opts;
     let forking = evm_options.fork_url.as_ref().map(|fork_url| Forking {
         json_rpc_url: Some(fork_url.url.clone()),
         block_number: evm_options.fork_block_number,
     });
 
-    let node_config = args.node_args.into_node_config();
-    let mut opt8n = Opt8n::new(Some(node_config), forking, args.output, args.genesis).await?;
+    let node_config = opt8n_args.node_args.clone().into_node_config();
+    let mut opt8n = Opt8n::new(
+        Some(node_config),
+        forking,
+        opt8n_args.output.clone(),
+        opt8n_args.genesis.clone(),
+    )
+    .await?;
 
     match args.command {
-        Commands::Repl {} => {
+        Commands::Repl { .. } => {
             opt8n.repl().await?;
         }
-        Commands::Script { mut script_args } => {
+        Commands::Script {
+            mut script_args, ..
+        } => {
             foundry_common::shell::set_shell(foundry_common::shell::Shell::from_args(
                 script_args.opts.silent,
                 script_args.json,
