@@ -15,7 +15,6 @@ use forge_script::ScriptArgs;
 use std::{
     fs::{self, File},
     path::PathBuf,
-    time::Duration,
 };
 
 use clap::{CommandFactory, FromArgMatches, Parser};
@@ -59,6 +58,7 @@ impl Opt8n {
 
         let (eth_api, node_handle) = anvil::spawn(node_config.clone()).await;
         eth_api.anvil_set_logging(false).await?;
+
         Ok(Self {
             eth_api,
             node_handle,
@@ -73,8 +73,6 @@ impl Opt8n {
     pub async fn repl(&mut self) -> Result<()> {
         let mut new_blocks = self.eth_api.backend.new_block_notifications();
 
-        tracing::info!("Listening");
-
         loop {
             tokio::select! {
                 command = self.receive_command() => {
@@ -86,7 +84,6 @@ impl Opt8n {
                 }
 
                 new_block = new_blocks.next() => {
-                    tracing::info!("New block: {:?}", new_block);
                     if let Some(new_block) = new_block {
                         if let Some(block) = self.eth_api.backend.get_block_by_hash(new_block.hash) {
                             self.generate_execution_fixture(block).await?;
@@ -101,24 +98,24 @@ impl Opt8n {
 
     /// Run a Forge script with the given arguments, and generate an execution fixture
     /// from the broadcasted transactions.
-    pub async fn run_script(&mut self, script_args: Box<ScriptArgs>) -> Result<()> {
+    pub async fn run_script(self, script_args: Box<ScriptArgs>) -> Result<()> {
         let mut new_blocks = self.eth_api.backend.new_block_notifications();
 
         // Run the forge script and broadcast the transactions to the anvil node
-        self.broadcast_transactions(script_args).await?;
+        let mut opt8n = self.broadcast_transactions(script_args).await?;
 
         // Mine the block and generate the execution fixture
-        self.mine_block().await;
+        opt8n.mine_block().await;
 
         let block = new_blocks.next().await.expect("TODO: handle error");
-        if let Some(block) = self.eth_api.backend.get_block_by_hash(block.hash) {
-            self.generate_execution_fixture(block).await?;
+        if let Some(block) = opt8n.eth_api.backend.get_block_by_hash(block.hash) {
+            opt8n.generate_execution_fixture(block).await?;
         }
 
         Ok(())
     }
 
-    async fn broadcast_transactions(&mut self, script_args: Box<ScriptArgs>) -> Result<()> {
+    async fn broadcast_transactions(self, script_args: Box<ScriptArgs>) -> Result<Self> {
         // Run the script, compile the transactions and broadcast to the anvil instance
         let compiled = script_args.preprocess().await?.compile()?;
 
@@ -143,8 +140,9 @@ impl Opt8n {
         // TODO: break into function
         let broadcast = bundled.broadcast();
 
-        let opt8n = &self;
-        let pending_transactions = async move {
+        let opt8n = self;
+
+        let pending_transactions = tokio::task::spawn(async move {
             loop {
                 let pending_tx_count = opt8n
                     .eth_api
@@ -155,20 +153,22 @@ impl Opt8n {
                     .len();
 
                 if pending_tx_count == tx_count {
-                    break;
+                    return opt8n;
                 }
             }
-        };
+        });
 
-        tokio::select! {
+        let opt8n = tokio::select! {
             _ = broadcast => {
                 // TODO: Gracefully handle this error
                 return Err(eyre!("Script failed early"));
             },
-            _ = pending_transactions => {}
+            opt8n = pending_transactions => {
+                opt8n?
+            }
         };
 
-        Ok(())
+        Ok(opt8n)
     }
 
     async fn receive_command(&self) -> Result<ReplCommand> {
