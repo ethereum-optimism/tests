@@ -10,8 +10,9 @@ install-opt8n:
   cargo install --path ../../bin/opt8n --locked
 
 # Cleans build artifacts and cache
-clean:
+forge-updates:
   @forge clean
+  @forge update
 
 # Runs all scripts
 scripts: weth9 
@@ -21,8 +22,9 @@ weth9:
   forge script Weth9Precompile
 
 # Generates all execution test fixtures for scripts in this project
-gen: gen-weth9
+gen fork_url: install-opt8n forge-updates
+  opt8n --output ../../fixtures/execution/Weth9Precompile.json --fork-url {{fork_url}} script Weth9Precompile
 
 # Generates the execution test fixture for the weth9 precompile script
-gen-weth9: install-opt8n clean
-  opt8n --output ./examples/execution/Weth9Precompile.json script Weth9Precompile
+gen-weth9 fork_url: install-opt8n forge-updates
+  opt8n --output ../../fixtures/execution/Weth9Precompile.json --fork-url {{fork_url}} script Weth9Precompile
