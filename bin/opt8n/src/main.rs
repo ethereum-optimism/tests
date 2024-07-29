@@ -13,6 +13,8 @@ use opt8n::Opt8n;
 pub struct Args {
     #[command(subcommand)]
     pub command: Commands,
+    #[command(flatten)]
+    pub node_args: NodeArgs,
 }
 
 #[derive(Parser, Clone, Debug)]
@@ -44,11 +46,9 @@ impl Commands {
 
 #[derive(Parser, Clone, Debug)]
 pub struct Opt8nArgs {
-    #[command(flatten)]
-    pub node_args: NodeArgs,
-    #[clap(short, long, help = "Output file for the execution test fixture")]
+    #[clap(long, help = "Output file for the execution test fixture")]
     pub output: PathBuf,
-    #[clap(short, long, help = "Path to genesis state")]
+    #[clap(long, help = "Path to genesis state")]
     pub genesis: Option<PathBuf>,
 }
 
@@ -56,15 +56,16 @@ pub struct Opt8nArgs {
 async fn main() -> eyre::Result<()> {
     color_eyre::install()?;
     let args = Args::parse();
+    let node_args = args.node_args.clone();
     let opt8n_args = args.command.get_opt8n_args();
 
-    let evm_options = &opt8n_args.node_args.evm_opts;
+    let evm_options = node_args.evm_opts.clone();
     let forking = evm_options.fork_url.as_ref().map(|fork_url| Forking {
         json_rpc_url: Some(fork_url.url.clone()),
         block_number: evm_options.fork_block_number,
     });
 
-    let node_config = opt8n_args.node_args.clone().into_node_config();
+    let node_config = node_args.clone().into_node_config();
     let mut opt8n = Opt8n::new(
         Some(node_config),
         forking,
