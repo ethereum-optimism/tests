@@ -25,21 +25,20 @@ clap = { version = "4", features = ["derive"] }
 shellwords = "1"
 
 # Eth
-op-alloy-rpc-types = "0.1.2"
-op-alloy-consensus = "0.1.2"
-alloy = { version = "0.1.4", features = [
+op-alloy-rpc-types = "0.1.4"
+op-alloy-consensus = "0.1.4"
+alloy = { version = "0.2", features = [
     "rpc",
     "rpc-types-trace",
     "consensus",
-    "providers"
+    "providers",
 ] }
-foundry-common = { git = "https://github.com/foundry-rs/foundry", default-features = true, rev = "7c4482fc9541f11b57575e2d8bf7bd190b61bda6" }
-anvil = { git = "https://github.com/foundry-rs/foundry", default-features = true, rev = "7c4482fc9541f11b57575e2d8bf7bd190b61bda6" }
-anvil-core = { git = "https://github.com/foundry-rs/foundry", default-features = true, rev = "7c4482fc9541f11b57575e2d8bf7bd190b61bda6" }
-cast = { git = "https://github.com/foundry-rs/foundry", rev = "7c4482fc9541f11b57575e2d8bf7bd190b61bda6" }
-forge-script = { git = "https://github.com/foundry-rs/foundry", rev = "7c4482fc9541f11b57575e2d8bf7bd190b61bda6" }
-revm = { version = "10.0.0", features = ["alloydb", "optimism"] }
-revm-inspectors = { version = "0.3", features = ["serde"] }
+foundry-common = { git = "https://github.com/foundry-rs/foundry", default-features = true, rev = "9444c6217a258cb4fd6ac38597ea282d6642ec7c" }
+anvil = { git = "https://github.com/foundry-rs/foundry", default-features = true, rev = "9444c6217a258cb4fd6ac38597ea282d6642ec7c" }
+anvil-core = { git = "https://github.com/foundry-rs/foundry", default-features = true, rev = "9444c6217a258cb4fd6ac38597ea282d6642ec7c" }
+cast = { git = "https://github.com/foundry-rs/foundry", rev = "9444c6217a258cb4fd6ac38597ea282d6642ec7c" }
+forge-script = { git = "https://github.com/foundry-rs/foundry", rev = "9444c6217a258cb4fd6ac38597ea282d6642ec7c" }
+revm = { version = "12.1", features = ["alloydb", "optimism"] }
 
 # Internal
 op-test-vectors = { path = "crates/op-test-vectors" }
