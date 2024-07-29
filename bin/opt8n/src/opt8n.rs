@@ -44,10 +44,11 @@ impl Opt8n {
         output_file: PathBuf,
         genesis: Option<PathBuf>,
     ) -> Result<Self> {
-        let genesis = genesis.as_ref().map(|path| {
-            serde_json::from_reader(File::open(path).expect("TODO: handle error Invalid path"))
-                .expect("TODO: handle error Invalid genesis")
-        });
+        let genesis = if let Some(genesis) = genesis.as_ref() {
+            serde_json::from_reader(File::open(genesis)?)?
+        } else {
+            None
+        };
 
         let node_config = node_config
             .unwrap_or_default()
@@ -106,7 +107,7 @@ impl Opt8n {
         // Mine the block and generate the execution fixture
         opt8n.mine_block().await;
 
-        let block = new_blocks.next().await.expect("TODO: handle error");
+        let block = new_blocks.next().await.ok_or(eyre!("No new block"))?;
         if let Some(block) = opt8n.eth_api.backend.get_block_by_hash(block.hash) {
             opt8n.generate_execution_fixture(block).await?;
         }
@@ -147,7 +148,7 @@ impl Opt8n {
                     .eth_api
                     .txpool_content()
                     .await
-                    .expect("TODO: handle error")
+                    .expect("Failed to get txpool content")
                     .pending
                     .len();
 
@@ -207,7 +208,7 @@ impl Opt8n {
                 self.node_handle.http_provider(),
                 BlockId::from(block.header.number - 1),
             )
-            .expect("Could not create AlloyDB"),
+            .ok_or_else(|| eyre!("Failed to create AlloyDB"))?,
         );
 
         let block_env = BlockEnv {
