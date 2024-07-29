@@ -104,8 +104,21 @@ impl Opt8n {
     pub async fn run_script(&mut self, script_args: Box<ScriptArgs>) -> Result<()> {
         let mut new_blocks = self.eth_api.backend.new_block_notifications();
 
-        // script_args.run_script()
+        // Run the forge script and broadcast the transactions to the anvil node
+        self.broadcast_transactions(script_args).await?;
 
+        // Mine the block and generate the execution fixture
+        self.mine_block().await;
+
+        let block = new_blocks.next().await.expect("TODO: handle error");
+        if let Some(block) = self.eth_api.backend.get_block_by_hash(block.hash) {
+            self.generate_execution_fixture(block).await?;
+        }
+
+        Ok(())
+    }
+
+    async fn broadcast_transactions(&mut self, script_args: Box<ScriptArgs>) -> Result<()> {
         // Run the script, compile the transactions and broadcast to the anvil instance
         let compiled = script_args.preprocess().await?.compile()?;
 
@@ -121,27 +134,39 @@ impl Opt8n {
 
         let bundled = pre_simulation.fill_metadata().await?.bundle().await?;
 
-        /*  FIXME: Currently, when broadcasting transactions via bundled state, this logic will
-        wait for transaction receipts before completing. The following logic waits to allow the transactions
-        to be broadcasted to the anvil instance before calling `mine_block`. Further changes are needed to make this truly synchronous.
-        */
+        let tx_count = bundled
+            .sequence
+            .sequences()
+            .iter()
+            .fold(0, |sum, sequence| sum + sequence.transactions.len());
+
+        // TODO: break into function
         let broadcast = bundled.broadcast();
+
+        let opt8n = &self;
+        let pending_transactions = async move {
+            loop {
+                let pending_tx_count = opt8n
+                    .eth_api
+                    .txpool_content()
+                    .await
+                    .expect("TODO: handle error")
+                    .pending
+                    .len();
+
+                if pending_tx_count == tx_count {
+                    break;
+                }
+            }
+        };
+
         tokio::select! {
             _ = broadcast => {
+                // TODO: Gracefully handle this error
                 return Err(eyre!("Script failed early"));
-
             },
-            _ = tokio::time::sleep(Duration::from_millis(500)) => {
-            }
-        }
-
-        // Mine the block and generate the execution fixture
-        self.mine_block().await;
-
-        let block = new_blocks.next().await.expect("TODO: handle error");
-        if let Some(block) = self.eth_api.backend.get_block_by_hash(block.hash) {
-            self.generate_execution_fixture(block).await?;
-        }
+            _ = pending_transactions => {}
+        };
 
         Ok(())
     }
