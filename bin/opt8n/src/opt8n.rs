@@ -122,7 +122,7 @@ impl Opt8n {
         let bundled = pre_simulation.fill_metadata().await?.bundle().await?;
 
         /*  FIXME: Currently, when broadcasting transactions via bundled state, this logic will
-        wait for transaction receipts before completing. The following logic waits for 1 second to allow the transactions
+        wait for transaction receipts before completing. The following logic waits to allow the transactions
         to be broadcasted to the anvil instance before calling `mine_block`. Further changes are needed to make this truly synchronous.
         */
         let broadcast = bundled.broadcast();
@@ -131,7 +131,7 @@ impl Opt8n {
                 return Err(eyre!("Script failed early"));
 
             },
-            _ = tokio::time::sleep(Duration::from_secs(1)) => {
+            _ = tokio::time::sleep(Duration::from_millis(500)) => {
             }
         }
 
