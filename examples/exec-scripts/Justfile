@@ -19,3 +19,7 @@ gen fork_url: install-opt8n forge-updates
 # Generates the execution test fixture for the weth9 precompile script
 gen-weth9 fork_url: install-opt8n forge-updates
   opt8n --output ../../fixtures/execution/Weth9Precompile.json --fork-url {{fork_url}} script Weth9Precompile
+
+# Generates the execution test fixture for the governance token precompile script
+gen-governance-token fork_url: install-opt8n forge-updates
+  opt8n --output ../../fixtures/execution/GovernanceTokenPrecompile.json --fork-url {{fork_url}} script GovernanceTokenPrecompile
