@@ -23,7 +23,9 @@ use futures::{join, StreamExt, TryFutureExt};
 use op_test_vectors::execution::{ExecutionFixture, ExecutionReceipt, ExecutionResult};
 use revm::{
     db::{AlloyDB, CacheDB},
-    primitives::{BlobExcessGasAndPrice, BlockEnv, U256},
+    primitives::{
+        BlobExcessGasAndPrice, BlockEnv, CfgEnvWithHandlerCfg, Env, HandlerCfg, SpecId, U256,
+    },
     DatabaseCommit, EvmBuilder,
 };
 use serde::{Deserialize, Serialize};
@@ -173,12 +175,26 @@ impl Opt8n {
                 .map(|excess_gas| BlobExcessGasAndPrice::new(excess_gas as u64)),
         };
 
+        let mut env = Env {
+            block: block_env,
+            ..Default::default()
+        };
+        env.cfg.chain_id = self.eth_api.chain_id();
+
+        let handler_cfg = HandlerCfg {
+            spec_id: SpecId::from(self.node_config.hardfork.unwrap_or_default()),
+            is_optimism: true,
+        };
+        let cfg_env_with_handler_cfg = CfgEnvWithHandlerCfg {
+            cfg_env: env.cfg.clone(),
+            handler_cfg,
+        };
         let mut evm = EvmBuilder::default()
             .with_db(Box::new(revm_db))
-            .with_block_env(block_env)
+            .with_env(Box::new(env))
+            .with_cfg_env_with_handler_cfg(cfg_env_with_handler_cfg)
             .build();
 
-        evm.context.evm.env.cfg.chain_id = self.eth_api.chain_id();
         for tx in block.transactions.iter() {
             let pending = PendingTransaction::new(tx.clone().into())?;
             evm.context.evm.env.tx = pending.to_revm_tx_env();
