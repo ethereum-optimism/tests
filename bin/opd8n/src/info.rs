@@ -7,6 +7,7 @@ use reqwest::Url;
 use std::sync::Arc;
 use superchain_registry::ROLLUP_CONFIGS;
 
+/// Runs the info subcommand.
 pub async fn run(l2_chain_id: u64, block: u64, rpc_url: String) -> Result<()> {
     let url = Url::parse(&rpc_url).map_err(|e| eyre!("Invalid RPC URL: {}", e))?;
     let rollup_config = ROLLUP_CONFIGS

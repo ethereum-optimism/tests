@@ -4594,6 +4594,7 @@ dependencies = [
  "superchain-registry",
  "tokio",
  "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

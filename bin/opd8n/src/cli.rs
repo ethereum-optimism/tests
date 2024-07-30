@@ -1,3 +1,5 @@
+//! CLI for the opd8n tool
+
 use alloy_primitives::B256;
 use clap::Parser;
 use color_eyre::eyre::Result;
@@ -24,6 +26,7 @@ pub enum Commands {
     },
     /// Pulls in the batch calldata or blob data for a given L1 Block
     FromL1 {
+        /// Arguments for the L1 command
         #[command(flatten)]
         l1_args: L1Args,
     },
@@ -42,6 +45,7 @@ pub enum Commands {
     },
 }
 
+/// CLI arguments for the `from-l1` subcommand of `opd8n`.
 #[derive(Parser, Clone, Debug)]
 pub struct L1Args {
     /// The L1 block number to start from
