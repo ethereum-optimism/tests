@@ -1,11 +1,10 @@
-use alloy::{
-    eips::BlockId,
-    rpc::types::{
-        anvil::Forking,
-        trace::geth::{PreStateConfig, PreStateFrame},
-    },
-};
+//! opt8n binary logic
 
+use alloy_eips::BlockId;
+use alloy_rpc_types::{
+    anvil::Forking,
+    trace::geth::{PreStateConfig, PreStateFrame},
+};
 use anvil::{cmd::NodeArgs, eth::EthApi, NodeConfig, NodeHandle};
 use anvil_core::eth::block::Block;
 use anvil_core::eth::transaction::PendingTransaction;

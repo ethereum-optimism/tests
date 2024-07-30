@@ -1,7 +1,7 @@
 //! Module containing the derivation test fixture.
 
-use alloy::consensus::Blob;
-use alloy::primitives::{Bytes, B256};
+use alloy_consensus::Blob;
+use alloy_primitives::{Bytes, B256};
 use serde::{Deserialize, Serialize};
 
 /// The derivation fixture is the top-level object that contains
@@ -46,7 +46,7 @@ pub struct FixtureBlock {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy::primitives::{b256, bytes};
+    use alloy_primitives::{b256, bytes};
 
     fn ref_blocks() -> Vec<FixtureBlock> {
         vec![

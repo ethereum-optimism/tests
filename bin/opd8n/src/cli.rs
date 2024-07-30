@@ -1,7 +1,7 @@
+use alloy_primitives::B256;
 use clap::Parser;
 use color_eyre::eyre::Result;
 use std::path::PathBuf;
-use alloy::primitives::{Address, B256};
 
 /// Main opd8n CLI
 #[derive(Parser, Clone, Debug)]
@@ -50,12 +50,6 @@ pub struct L1Args {
     /// The output file for the test fixture.
     #[clap(long, help = "Output file for the test fixture")]
     pub output: PathBuf,
-    /// The batcher address.
-    #[clap(long, help = "The batcher address to check against")]
-    pub batcher_address: Address,
-    /// The signer address.
-    #[clap(long, help = "The signer to check against")]
-    pub signer: Address,
 }
 
 impl Cli {
