@@ -34,10 +34,10 @@ pub enum Commands {
     #[command(visible_alias = "i")]
     Info {
         /// The L2 Chain ID
-        #[clap(short, long, help = "L2 chain ID")]
+        #[clap(long, help = "L2 chain ID")]
         l2_chain_id: u64,
         /// The L2 block number to get info for
-        #[clap(short, long, help = "L2 block number")]
+        #[clap(long, help = "L2 block number")]
         l2_block: u64,
         /// The rpc url to fetch L2 block info from.
         #[clap(long, help = "RPC url to fetch L2 block info from")]
