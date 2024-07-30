@@ -22,8 +22,8 @@ use crate::cli::L1Args;
 /// data associated with this block.
 pub async fn run(args: L1Args) -> Result<()> {
     ensure!(
-        !args.blocks.is_empty(),
-        "Must provide at least one L1 block number"
+        args.end_block > args.start_block,
+        "End block must come after the start block"
     );
     let outputs = if args.derive {
         derive(&args).await?
@@ -34,17 +34,10 @@ pub async fn run(args: L1Args) -> Result<()> {
         !outputs.is_empty(),
         "Must provide at least one L2 output root"
     );
-    let min = args
-        .blocks
-        .iter()
-        .min()
-        .ok_or_else(|| eyre!("No minimum block number"))?;
-    let max = args
-        .blocks
-        .iter()
-        .max()
-        .ok_or_else(|| eyre!("No maximum block number"))?;
-    trace!(target: "from-l1", "Producing derivation fixture for L1 block range [{}, {}]", min, max);
+    trace!(target: "from-l1", "Producing derivation fixture for L1 block range [{}, {}]", args.start_block, args.end_block);
+
+    // Construct a sequential list of block numbers from [start_block, end_block].
+    let blocks = (args.start_block..=args.end_block).collect::<Vec<_>>();
 
     // Construct the providers
     let l1_rpc_url = Url::parse(&args.rpc_url).map_err(|e| eyre!("Invalid L1 RPC URL: {}", e))?;
@@ -72,7 +65,7 @@ pub async fn run(args: L1Args) -> Result<()> {
     let fixture_blocks = build_fixture_blocks(
         batcher_address,
         signer,
-        &args.blocks,
+        &blocks,
         &mut l1_provider,
         &mut blob_provider,
     )

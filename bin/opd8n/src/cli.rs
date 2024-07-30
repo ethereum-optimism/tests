@@ -27,13 +27,29 @@ pub enum Commands {
         #[command(flatten)]
         l1_args: L1Args,
     },
+    /// Gets the L2 block info including the l1 origin for the l2 block number.
+    #[command(visible_alias = "i")]
+    Info {
+        /// The L2 Chain ID
+        #[clap(short, long, help = "L2 chain ID")]
+        l2_chain_id: u64,
+        /// The L2 block number to get info for
+        #[clap(short, long, help = "L2 block number")]
+        l2_block: u64,
+        /// The rpc url to fetch L2 block info from.
+        #[clap(long, help = "RPC url to fetch L2 block info from")]
+        rpc_url: String,
+    },
 }
 
 #[derive(Parser, Clone, Debug)]
 pub struct L1Args {
-    /// A list of L1 blocks to fetch data from.
-    #[clap(short, long, help = "L1 block number")]
-    pub blocks: Vec<u64>,
+    /// The L1 block number to start from
+    #[clap(short, long, help = "Starting L1 block number")]
+    pub start_block: u64,
+    /// The L1 block number to end at
+    #[clap(short, long, help = "Ending L1 block number")]
+    pub end_block: u64,
     /// A list of L2 output root hashes to assert against.
     #[clap(short, long, help = "L2 output root hashes")]
     pub outputs: Vec<B256>,
@@ -58,6 +74,11 @@ impl Cli {
         match self.command {
             Commands::FromL2 { input } => Self::load(input).await,
             Commands::FromL1 { l1_args } => crate::from_l1::run(l1_args).await,
+            Commands::Info {
+                l2_chain_id,
+                l2_block,
+                rpc_url,
+            } => crate::info::run(l2_chain_id, l2_block, rpc_url).await,
         }
     }
 
