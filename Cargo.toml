@@ -25,8 +25,8 @@ clap = { version = "4", features = ["derive"] }
 shellwords = "1"
 
 # Eth
-op-alloy-rpc-types = "0.1.4"
-op-alloy-consensus = "0.1.4"
+op-alloy-rpc-types = "0.1.2"
+op-alloy-consensus = "=0.1.2"
 alloy = { version = "0.2", features = [
     "rpc",
     "rpc-types-trace",
@@ -39,6 +39,9 @@ anvil-core = { git = "https://github.com/foundry-rs/foundry", default-features =
 cast = { git = "https://github.com/foundry-rs/foundry", rev = "9444c6217a258cb4fd6ac38597ea282d6642ec7c" }
 forge-script = { git = "https://github.com/foundry-rs/foundry", rev = "9444c6217a258cb4fd6ac38597ea282d6642ec7c" }
 revm = { version = "12.1", features = ["alloydb", "optimism"] }
+
+# Kona
+kona-derive = { git = "https://github.com/ethereum-optimism/kona", branch = "main", features = ["online"] }
 
 # Internal
 op-test-vectors = { path = "crates/op-test-vectors" }

@@ -10,13 +10,17 @@ publish = false
 
 [dependencies]
 # Workspace
+alloy.workspace = true
 clap.workspace = true
 tokio.workspace = true
 futures.workspace = true
 color-eyre.workspace = true
 op-test-vectors.workspace = true
+kona-derive.workspace = true
 
 # External
+alloy-eips = { version = "0.1", default-features = false }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0" }
 tracing = { version = "0.1" }
+reqwest = "0.12"

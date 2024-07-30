@@ -15,6 +15,16 @@ pub struct DerivationFixture {
     pub l2_output_roots: Vec<B256>,
 }
 
+impl DerivationFixture {
+    /// Constructs a new [DerivationFixture] with the given L1 blocks and L2 output roots.
+    pub fn new(l1_blocks: Vec<FixtureBlock>, l2_output_roots: Vec<B256>) -> Self {
+        Self {
+            l1_blocks,
+            l2_output_roots,
+        }
+    }
+}
+
 /// A fixture block is a minimal block with associated data including blobs
 /// to derive from.
 #[derive(Serialize, Deserialize, Debug, Default, Eq, PartialEq)]
