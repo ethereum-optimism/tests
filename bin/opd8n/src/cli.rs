@@ -1,7 +1,7 @@
 //! CLI for the opd8n tool
 
 use alloy_primitives::B256;
-use clap::Parser;
+use clap::{ArgAction, Parser};
 use color_eyre::eyre::Result;
 use std::path::PathBuf;
 
@@ -14,6 +14,25 @@ pub struct Cli {
     pub command: Commands,
 }
 
+impl Cli {
+    /// Returns the verbosity level for the CLI
+    pub fn v(&self) -> u8 {
+        match &self.command {
+            Commands::FromL2 { global, .. } => global.v,
+            Commands::FromL1 { global, .. } => global.v,
+            Commands::Info { global, .. } => global.v,
+        }
+    }
+}
+
+/// Global Arguments for the CLI
+#[derive(Parser, Clone, Debug)]
+pub struct GlobalArgs {
+    /// Verbosity level (0-4)
+    #[arg(long, short, help = "Verbosity level (0-4)", action = ArgAction::Count)]
+    pub v: u8,
+}
+
 /// Subcommands for the CLI
 #[derive(Parser, Clone, Debug)]
 pub enum Commands {
@@ -23,12 +42,18 @@ pub enum Commands {
         /// Path to the L2 info file
         #[clap(short, long, help = "Path to the L2 block info file")]
         input: PathBuf,
+        /// Global arguments
+        #[clap(flatten)]
+        global: GlobalArgs,
     },
     /// Pulls in the batch calldata or blob data for a given L1 Block
     FromL1 {
         /// Arguments for the L1 command
         #[command(flatten)]
         l1_args: L1Args,
+        /// Global arguments
+        #[clap(flatten)]
+        global: GlobalArgs,
     },
     /// Gets the L2 block info including the l1 origin for the l2 block number.
     #[command(visible_alias = "i")]
@@ -42,6 +67,9 @@ pub enum Commands {
         /// The rpc url to fetch L2 block info from.
         #[clap(long, help = "RPC url to fetch L2 block info from")]
         rpc_url: String,
+        /// Global arguments
+        #[clap(flatten)]
+        global: GlobalArgs,
     },
 }
 
@@ -73,15 +101,23 @@ pub struct L1Args {
 }
 
 impl Cli {
+    /// Initializes telemtry for the application.
+    pub fn init_telemetry(self) -> Result<Self> {
+        color_eyre::install()?;
+        crate::verbosity::init_tracing(self.v())?;
+        Ok(self)
+    }
+
     /// Parse the CLI arguments and run the command
     pub async fn run(self) -> Result<()> {
         match self.command {
-            Commands::FromL2 { input } => Self::load(input).await,
-            Commands::FromL1 { l1_args } => crate::from_l1::run(l1_args).await,
+            Commands::FromL2 { input, .. } => Self::load(input).await,
+            Commands::FromL1 { l1_args, .. } => crate::from_l1::run(l1_args).await,
             Commands::Info {
                 l2_chain_id,
                 l2_block,
                 rpc_url,
+                ..
             } => crate::info::run(l2_chain_id, l2_block, rpc_url).await,
         }
     }
