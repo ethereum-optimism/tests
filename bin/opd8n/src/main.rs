@@ -1,10 +1,6 @@
 use clap::Parser;
-use color_eyre::eyre::Result;
-
-pub mod cli;
 
 #[tokio::main]
-async fn main() -> Result<()> {
-    color_eyre::install()?;
-    cli::Cli::parse().run().await
+async fn main() -> color_eyre::Result<()> {
+    opd8n::Cli::parse().init_telemetry()?.run().await
 }

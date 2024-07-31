@@ -1,7 +1,7 @@
 pub mod opt8n;
 use std::path::PathBuf;
 
-use alloy::rpc::types::anvil::Forking;
+use alloy_rpc_types::anvil::Forking;
 use anvil::cmd::NodeArgs;
 use clap::Parser;
 use color_eyre::eyre;
