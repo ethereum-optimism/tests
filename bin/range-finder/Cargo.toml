@@ -1,0 +1,30 @@
+[package]
+name = "range-finder"
+version = "0.1.0"
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish = true
+
+[dependencies]
+# Core
+tracing.workspace = true
+tokio.workspace = true
+reqwest.workspace = true
+futures.workspace = true
+color-eyre.workspace = true
+tracing-subscriber.workspace = true
+
+# CLI
+clap.workspace = true
+
+# Alloy
+alloy-primitives.workspace = true
+alloy-consensus.workspace = true
+alloy-eips.workspace = true
+
+# OP Types + Kona
+kona-derive.workspace = true
+superchain-registry.workspace = true

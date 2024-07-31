@@ -5231,6 +5231,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "range-finder"
+version = "0.1.0"
+dependencies = [
+ "alloy-consensus",
+ "alloy-eips",
+ "alloy-primitives",
+ "clap",
+ "color-eyre",
+ "futures",
+ "kona-derive",
+ "reqwest",
+ "superchain-registry",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "ratatui"
 version = "0.26.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
