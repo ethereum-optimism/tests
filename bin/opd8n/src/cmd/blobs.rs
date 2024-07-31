@@ -82,18 +82,10 @@ fn extract_blob_data(
             continue;
         }
         if !calldata.is_empty() {
-            let hash = match &tx {
-                TxEnvelope::Legacy(tx) => Some(tx.hash()),
-                TxEnvelope::Eip2930(tx) => Some(tx.hash()),
-                TxEnvelope::Eip1559(tx) => Some(tx.hash()),
-                TxEnvelope::Eip4844(blob_tx_wrapper) => Some(blob_tx_wrapper.hash()),
-                _ => None,
-            };
+            let hash = tx.tx_hash();
             warn!(target: "blobs", "Blob tx has calldata, which will be ignored: {hash:?}");
         }
-        let blob_hashes = if let Some(b) = blob_hashes {
-            b
-        } else {
+        let Some(blob_hashes) = blob_hashes else {
             continue;
         };
         for blob in blob_hashes {

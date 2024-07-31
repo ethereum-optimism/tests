@@ -3,13 +3,5 @@
 #![deny(unused_must_use, rust_2018_idioms)]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 
-pub mod verbosity;
-
-pub mod blobs;
-
-pub mod cli;
-pub use cli::Cli;
-
-pub mod from_l1;
-
-pub mod info;
+pub mod cmd;
+pub use cmd::Cli;
