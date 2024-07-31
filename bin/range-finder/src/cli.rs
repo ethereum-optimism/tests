@@ -74,7 +74,7 @@ impl Cli {
             .expect("Failed to fetch genesis L1 block info for pipeline tip");
         let mut pipeline = new_online_pipeline(
             cfg,
-            l1_provider.clone(),
+            l1_provider,
             dap,
             l2_provider.clone(),
             attributes,
@@ -110,10 +110,6 @@ impl Cli {
             let Some(attributes) = pipeline.next() else {
                 continue;
             };
-                attributes
-            } else {
-                continue;
-            };
 
             // Print the L1 range for this L2 Block.
             let derived = attributes.parent.block_info.number as i64 + 1;
@@ -121,7 +117,9 @@ impl Cli {
                 .l2_block_info_by_number(derived as u64)
                 .await
                 .map_err(|e| eyre!(e))?;
-            let origin = pipeline.origin().ok_or(eyre!("Failed to get pipeline l1 origin"))?;
+            let origin = pipeline
+                .origin()
+                .ok_or(eyre!("Failed to get pipeline l1 origin"))?;
             println!(
                 "L2 Block [{}] L1 Range: [{}, {}]",
                 derived, l2_block_info.l1_origin.number, origin.number
