@@ -107,7 +107,9 @@ impl Cli {
             }
 
             // Get the attributes if there are some available.
-            let attributes = if let Some(attributes) = pipeline.next() {
+            let Some(attributes) = pipeline.next() else {
+                continue;
+            };
                 attributes
             } else {
                 continue;
