@@ -121,7 +121,7 @@ impl Cli {
                 .l2_block_info_by_number(derived as u64)
                 .await
                 .expect("Failed to fetch L2 block info for pipeline cursor");
-            let origin = pipeline.origin().expect("Failed to get pipeline l1 origin");
+            let origin = pipeline.origin().ok_or(eyre!("Failed to get pipeline l1 origin"))?;
             println!(
                 "L2 Block [{}] L1 Range: [{}, {}]",
                 derived, l2_block_info.l1_origin.number, origin.number
