@@ -4570,6 +4570,7 @@ dependencies = [
  "alloy-rpc-types",
  "anvil-core",
  "color-eyre",
+ "kona-derive",
  "op-alloy-consensus",
  "op-alloy-rpc-types",
  "serde",
