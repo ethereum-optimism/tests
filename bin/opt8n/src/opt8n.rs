@@ -1,5 +1,6 @@
 //! opt8n binary logic
 
+use alloy_eips::eip2718::Encodable2718;
 use alloy_eips::BlockId;
 use alloy_rpc_types::{
     anvil::Forking,
@@ -11,6 +12,7 @@ use anvil_core::eth::transaction::PendingTransaction;
 use cast::traces::{GethTraceBuilder, TracingInspectorConfig};
 use forge_script::ScriptArgs;
 use std::{
+    error::Error,
     fs::{self, File},
     path::PathBuf,
 };
@@ -21,8 +23,8 @@ use futures::StreamExt;
 use op_test_vectors::execution::{ExecutionFixture, ExecutionReceipt, ExecutionResult};
 use revm::{
     db::{AlloyDB, CacheDB},
-    primitives::{BlobExcessGasAndPrice, BlockEnv, U256},
-    DatabaseCommit, EvmBuilder,
+    primitives::{BlobExcessGasAndPrice, BlockEnv, CfgEnv, Env, SpecId, U256},
+    Database, DatabaseCommit, DatabaseRef, Evm, EvmBuilder,
 };
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, BufReader};
@@ -213,30 +215,24 @@ impl Opt8n {
             .ok_or_else(|| eyre!("Failed to create AlloyDB"))?,
         );
 
-        let block_env = BlockEnv {
-            number: U256::from(block.header.number),
-            coinbase: block.header.beneficiary,
-            timestamp: U256::from(block.header.timestamp),
-            difficulty: block.header.difficulty,
-            gas_limit: U256::from(block.header.gas_limit),
-            prevrandao: Some(block.header.mix_hash),
-            basefee: U256::from(block.header.base_fee_per_gas.unwrap_or_default()),
-            blob_excess_gas_and_price: block
-                .header
-                .excess_blob_gas
-                .map(|excess_gas| BlobExcessGasAndPrice::new(excess_gas as u64)),
-        };
+        let mut evm = evm(
+            block,
+            self.eth_api.chain_id(),
+            CacheDB::new(revm_db),
+            SpecId::from(self.node_config.hardfork.unwrap_or_default()),
+        );
 
-        let mut evm = EvmBuilder::default()
-            .with_db(Box::new(revm_db))
-            .with_block_env(block_env)
-            .build();
-
-        evm.context.evm.env.cfg.chain_id = self.eth_api.chain_id();
         for tx in block.transactions.iter() {
             let pending = PendingTransaction::new(tx.clone().into())?;
-            evm.context.evm.env.tx = pending.to_revm_tx_env();
+            let mut buff = Vec::<u8>::with_capacity(pending.transaction.encode_2718_len());
+            pending.transaction.encode_2718(&mut buff);
+
+            let mut tx_env = pending.to_revm_tx_env();
+            tx_env.optimism.enveloped_tx = Some(buff.into());
+            evm.context.evm.env.tx = tx_env;
+
             let result = evm.transact()?;
+
             let db = &mut evm.context.evm.db;
             let pre_state_frame = GethTraceBuilder::new(vec![], TracingInspectorConfig::default())
                 .geth_prestate_traces(
@@ -308,6 +304,43 @@ impl Opt8n {
 
         Ok(())
     }
+}
+
+/// Creates a new EVM instance from a given block, chain, database, and spec id.
+pub fn evm<'a, DB>(block: &Block, chain_id: u64, db: DB, spec_id: SpecId) -> Evm<'a, (), Box<DB>>
+where
+    DB: Database + DatabaseRef + 'a,
+    <DB as Database>::Error: Error,
+{
+    let block_env = BlockEnv {
+        number: U256::from(block.header.number),
+        coinbase: block.header.beneficiary,
+        timestamp: U256::from(block.header.timestamp),
+        difficulty: block.header.difficulty,
+        gas_limit: U256::from(block.header.gas_limit),
+        prevrandao: Some(block.header.mix_hash),
+        basefee: U256::from(block.header.base_fee_per_gas.unwrap_or_default()),
+        blob_excess_gas_and_price: block
+            .header
+            .excess_blob_gas
+            .map(|excess_gas| BlobExcessGasAndPrice::new(excess_gas as u64)),
+    };
+
+    let mut cfg = CfgEnv::default();
+    cfg.chain_id = chain_id;
+    let env = Env {
+        block: block_env,
+        cfg,
+        ..Default::default()
+    };
+
+    let mut evm = EvmBuilder::default()
+        .with_db(Box::new(db))
+        .with_env(Box::new(env))
+        .optimism()
+        .build();
+    evm.modify_spec_id(spec_id);
+    evm
 }
 
 #[derive(Parser, Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
