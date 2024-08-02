@@ -1,5 +1,6 @@
 //! opt8n binary logic
 
+use alloy_eips::eip2718::Encodable2718;
 use alloy_eips::BlockId;
 use alloy_rpc_types::{
     anvil::Forking,
@@ -22,7 +23,7 @@ use futures::StreamExt;
 use op_test_vectors::execution::{ExecutionFixture, ExecutionReceipt, ExecutionResult};
 use revm::{
     db::{AlloyDB, CacheDB},
-    primitives::{BlobExcessGasAndPrice, BlockEnv, Bytes, CfgEnv, Env, SpecId, U256},
+    primitives::{BlobExcessGasAndPrice, BlockEnv, CfgEnv, Env, SpecId, U256},
     Database, DatabaseCommit, DatabaseRef, Evm, EvmBuilder,
 };
 use serde::{Deserialize, Serialize};
@@ -223,9 +224,15 @@ impl Opt8n {
 
         for tx in block.transactions.iter() {
             let pending = PendingTransaction::new(tx.clone().into())?;
+            let mut buff = Vec::<u8>::with_capacity(pending.transaction.encode_2718_len());
+            pending.transaction.encode_2718(&mut buff);
+
             let mut tx_env = pending.to_revm_tx_env();
-            tx_env.optimism.enveloped_tx = Some(Bytes::default());
+            tx_env.optimism.enveloped_tx = Some(buff.into());
+            evm.context.evm.env.tx = tx_env;
+
             let result = evm.transact()?;
+
             let db = &mut evm.context.evm.db;
             let pre_state_frame = GethTraceBuilder::new(vec![], TracingInspectorConfig::default())
                 .geth_prestate_traces(
