@@ -11,6 +11,7 @@ use anvil_core::eth::transaction::PendingTransaction;
 use cast::traces::{GethTraceBuilder, TracingInspectorConfig};
 use forge_script::ScriptArgs;
 use std::{
+    error::Error,
     fs::{self, File},
     path::PathBuf,
 };
@@ -21,10 +22,8 @@ use futures::StreamExt;
 use op_test_vectors::execution::{ExecutionFixture, ExecutionReceipt, ExecutionResult};
 use revm::{
     db::{AlloyDB, CacheDB},
-    primitives::{
-        BlobExcessGasAndPrice, BlockEnv, CfgEnvWithHandlerCfg, Env, HandlerCfg, SpecId, U256,
-    },
-    DatabaseCommit, EvmBuilder,
+    primitives::{BlobExcessGasAndPrice, BlockEnv, Bytes, CfgEnv, Env, SpecId, U256},
+    Database, DatabaseCommit, DatabaseRef, Evm, EvmBuilder,
 };
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, BufReader};
@@ -215,44 +214,17 @@ impl Opt8n {
             .ok_or_else(|| eyre!("Failed to create AlloyDB"))?,
         );
 
-        let block_env = BlockEnv {
-            number: U256::from(block.header.number),
-            coinbase: block.header.beneficiary,
-            timestamp: U256::from(block.header.timestamp),
-            difficulty: block.header.difficulty,
-            gas_limit: U256::from(block.header.gas_limit),
-            prevrandao: Some(block.header.mix_hash),
-            basefee: U256::from(block.header.base_fee_per_gas.unwrap_or_default()),
-            blob_excess_gas_and_price: block
-                .header
-                .excess_blob_gas
-                .map(|excess_gas| BlobExcessGasAndPrice::new(excess_gas as u64)),
-        };
-
-        let mut env = Env {
-            block: block_env,
-            ..Default::default()
-        };
-        env.cfg.chain_id = self.eth_api.chain_id();
-
-        let handler_cfg = HandlerCfg {
-            spec_id: SpecId::from(self.node_config.hardfork.unwrap_or_default()),
-            // @refcell When we set is_optimism true, execution fails here due to "Failed to load enveloped transaction."
-            ..Default::default()
-        };
-        let cfg_env_with_handler_cfg = CfgEnvWithHandlerCfg {
-            cfg_env: env.cfg.clone(),
-            handler_cfg,
-        };
-        let mut evm = EvmBuilder::default()
-            .with_db(Box::new(revm_db))
-            .with_env(Box::new(env))
-            .with_cfg_env_with_handler_cfg(cfg_env_with_handler_cfg)
-            .build();
+        let mut evm = evm(
+            block,
+            self.eth_api.chain_id(),
+            CacheDB::new(revm_db),
+            SpecId::from(self.node_config.hardfork.unwrap_or_default()),
+        );
 
         for tx in block.transactions.iter() {
             let pending = PendingTransaction::new(tx.clone().into())?;
-            evm.context.evm.env.tx = pending.to_revm_tx_env();
+            let mut tx_env = pending.to_revm_tx_env();
+            tx_env.optimism.enveloped_tx = Some(Bytes::default());
             let result = evm.transact()?;
             let db = &mut evm.context.evm.db;
             let pre_state_frame = GethTraceBuilder::new(vec![], TracingInspectorConfig::default())
@@ -325,6 +297,43 @@ impl Opt8n {
 
         Ok(())
     }
+}
+
+/// Creates a new EVM instance from a given block, chain, database, and spec id.
+pub fn evm<'a, DB>(block: &Block, chain_id: u64, db: DB, spec_id: SpecId) -> Evm<'a, (), Box<DB>>
+where
+    DB: Database + DatabaseRef + 'a,
+    <DB as Database>::Error: Error,
+{
+    let block_env = BlockEnv {
+        number: U256::from(block.header.number),
+        coinbase: block.header.beneficiary,
+        timestamp: U256::from(block.header.timestamp),
+        difficulty: block.header.difficulty,
+        gas_limit: U256::from(block.header.gas_limit),
+        prevrandao: Some(block.header.mix_hash),
+        basefee: U256::from(block.header.base_fee_per_gas.unwrap_or_default()),
+        blob_excess_gas_and_price: block
+            .header
+            .excess_blob_gas
+            .map(|excess_gas| BlobExcessGasAndPrice::new(excess_gas as u64)),
+    };
+
+    let mut cfg = CfgEnv::default();
+    cfg.chain_id = chain_id;
+    let env = Env {
+        block: block_env,
+        cfg,
+        ..Default::default()
+    };
+
+    let mut evm = EvmBuilder::default()
+        .with_db(Box::new(db))
+        .with_env(Box::new(env))
+        .optimism()
+        .build();
+    evm.modify_spec_id(spec_id);
+    evm
 }
 
 #[derive(Parser, Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
