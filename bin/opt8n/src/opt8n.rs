@@ -1,11 +1,10 @@
-use alloy::{
-    eips::BlockId,
-    rpc::types::{
-        anvil::Forking,
-        trace::geth::{PreStateConfig, PreStateFrame},
-    },
-};
+//! opt8n binary logic
 
+use alloy_eips::BlockId;
+use alloy_rpc_types::{
+    anvil::Forking,
+    trace::geth::{PreStateConfig, PreStateFrame},
+};
 use anvil::{cmd::NodeArgs, eth::EthApi, NodeConfig, NodeHandle};
 use anvil_core::eth::block::Block;
 use anvil_core::eth::transaction::PendingTransaction;
@@ -46,10 +45,11 @@ impl Opt8n {
         output_file: PathBuf,
         genesis: Option<PathBuf>,
     ) -> Result<Self> {
-        let genesis = genesis.as_ref().map(|path| {
-            serde_json::from_reader(File::open(path).expect("TODO: handle error Invalid path"))
-                .expect("TODO: handle error Invalid genesis")
-        });
+        let genesis = if let Some(genesis) = genesis.as_ref() {
+            serde_json::from_reader(File::open(genesis)?)?
+        } else {
+            None
+        };
 
         let node_config = node_config
             .unwrap_or_default()
@@ -108,7 +108,7 @@ impl Opt8n {
         // Mine the block and generate the execution fixture
         opt8n.mine_block().await;
 
-        let block = new_blocks.next().await.expect("TODO: handle error");
+        let block = new_blocks.next().await.ok_or(eyre!("No new block"))?;
         if let Some(block) = opt8n.eth_api.backend.get_block_by_hash(block.hash) {
             opt8n.generate_execution_fixture(block).await?;
         }
@@ -149,7 +149,7 @@ impl Opt8n {
                     .eth_api
                     .txpool_content()
                     .await
-                    .expect("TODO: handle error")
+                    .expect("Failed to get txpool content")
                     .pending
                     .len();
 
@@ -197,6 +197,9 @@ impl Opt8n {
                 node_args.run().await?;
             }
             ReplCommand::Cast { .. } => {}
+            ReplCommand::RpcEndpoint => {
+                println!("{}", self.node_handle.http_endpoint());
+            }
             ReplCommand::Exit => unreachable!(),
         }
         Ok(())
@@ -209,7 +212,7 @@ impl Opt8n {
                 self.node_handle.http_provider(),
                 BlockId::from(block.header.number - 1),
             )
-            .expect("Could not create AlloyDB"),
+            .ok_or_else(|| eyre!("Failed to create AlloyDB"))?,
         );
 
         let block_env = BlockEnv {
@@ -325,7 +328,7 @@ impl Opt8n {
 }
 
 #[derive(Parser, Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
-#[clap(rename_all = "kebab_case", infer_subcommands = true, multicall = true)]
+#[clap(rename_all = "snake_case", infer_subcommands = true, multicall = true)]
 pub enum ReplCommand {
     #[command(visible_alias = "a")]
     Anvil {
@@ -338,6 +341,7 @@ pub enum ReplCommand {
         args: Vec<String>,
     },
     Dump,
+    RpcEndpoint,
     // TODO: implement clear
     // TODO: implement reset
     #[command(visible_alias = "e")]

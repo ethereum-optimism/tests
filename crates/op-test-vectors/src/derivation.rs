@@ -1,7 +1,7 @@
 //! Module containing the derivation test fixture.
 
-use alloy::consensus::Blob;
-use alloy::primitives::{Bytes, B256};
+use alloy_consensus::Blob;
+use alloy_primitives::{Bytes, B256};
 use serde::{Deserialize, Serialize};
 
 /// The derivation fixture is the top-level object that contains
@@ -13,6 +13,16 @@ pub struct DerivationFixture {
     pub l1_blocks: Vec<FixtureBlock>,
     /// A list of L2 Output Roots to assert against.
     pub l2_output_roots: Vec<B256>,
+}
+
+impl DerivationFixture {
+    /// Constructs a new [DerivationFixture] with the given L1 blocks and L2 output roots.
+    pub fn new(l1_blocks: Vec<FixtureBlock>, l2_output_roots: Vec<B256>) -> Self {
+        Self {
+            l1_blocks,
+            l2_output_roots,
+        }
+    }
 }
 
 /// A fixture block is a minimal block with associated data including blobs
@@ -36,7 +46,7 @@ pub struct FixtureBlock {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy::primitives::{b256, bytes};
+    use alloy_primitives::{b256, bytes};
 
     fn ref_blocks() -> Vec<FixtureBlock> {
         vec![

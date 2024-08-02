@@ -1,0 +1,31 @@
+set positional-arguments
+# default recipe to display help information
+default:
+  @just --list
+
+# Installs the opt8n binary
+install-opt8n:
+  cargo install --path ../../bin/opt8n --locked
+
+# Cleans build artifacts and cache
+forge-updates:
+  @forge clean
+  @forge update
+
+# Generates all execution test fixtures for scripts in this project
+gen fork_url: install-opt8n forge-updates
+  just gen-weth9 {{fork_url}}
+  just gen-governance-token {{fork_url}}
+  just gen-multicall3 {{fork_url}}
+
+# Generates the execution test fixture for the weth9 precompile script
+gen-weth9 fork_url: install-opt8n forge-updates
+  opt8n --fork-url {{fork_url}} script --output ../../fixtures/execution/Weth9Precompile.json Weth9Precompile
+
+# Generates the execution test fixture for the governance token precompile script
+gen-governance-token fork_url: install-opt8n forge-updates
+  opt8n --fork-url {{fork_url}} script --output ../../fixtures/execution/GovernanceTokenPrecompile.json GovernanceTokenPrecompile
+
+# Generates the execution test fixture for the multicall3 preinstall script
+gen-multicall3 fork_url: install-opt8n forge-updates
+  opt8n --fork-url {{fork_url}} script --output ../../fixtures/execution/Multicall3Preinstall.json Multicall3Preinstall

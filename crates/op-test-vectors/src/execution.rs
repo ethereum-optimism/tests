@@ -1,8 +1,8 @@
 //! Module containing the execution test fixture.
 
-use alloy::primitives::{Address, Bloom, B256, U256};
-use alloy::rpc::types::trace::geth::AccountState;
-use alloy::rpc::types::{Log, TransactionReceipt};
+use alloy_primitives::{Address, Bloom, B256, U256};
+use alloy_rpc_types::trace::geth::AccountState;
+use alloy_rpc_types::{Log, TransactionReceipt};
 use anvil_core::eth::block::Block;
 use anvil_core::eth::transaction::{TypedReceipt, TypedTransaction};
 use color_eyre::eyre;

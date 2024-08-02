@@ -1,0 +1,3 @@
+[submodule "examples/exec-scripts/lib/forge-std"]
+	path = examples/exec-scripts/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std

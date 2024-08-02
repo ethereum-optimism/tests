@@ -1,6 +1,6 @@
 [workspace]
-members = ["crates/*", "bin/opt8n", "bin/opd8n"]
-default-members = ["bin/opt8n", "bin/opd8n"]
+members = ["crates/*", "bin/*"]
+default-members = ["bin/opt8n", "bin/opd8n", "bin/range-finder"]
 resolver = "2"
 
 [workspace.package]
@@ -23,22 +23,29 @@ tokio = { version = "1", features = ["full"] }
 futures = "0.3"
 clap = { version = "4", features = ["derive"] }
 shellwords = "1"
+reqwest = "0.12"
+tracing-subscriber = "0.3.18"
 
-# Eth
+# Alloy Dependencies
 op-alloy-rpc-types = "0.1.4"
 op-alloy-consensus = "0.1.4"
-alloy = { version = "0.2", features = [
-    "rpc",
-    "rpc-types-trace",
-    "consensus",
-    "providers",
-] }
-foundry-common = { git = "https://github.com/foundry-rs/foundry", default-features = true, rev = "9444c6217a258cb4fd6ac38597ea282d6642ec7c" }
-anvil = { git = "https://github.com/foundry-rs/foundry", default-features = true, rev = "9444c6217a258cb4fd6ac38597ea282d6642ec7c" }
-anvil-core = { git = "https://github.com/foundry-rs/foundry", default-features = true, rev = "9444c6217a258cb4fd6ac38597ea282d6642ec7c" }
-cast = { git = "https://github.com/foundry-rs/foundry", rev = "9444c6217a258cb4fd6ac38597ea282d6642ec7c" }
-forge-script = { git = "https://github.com/foundry-rs/foundry", rev = "9444c6217a258cb4fd6ac38597ea282d6642ec7c" }
+alloy-primitives = { version = "0.7" }
+alloy-consensus = { version = "0.2" }
+alloy-eips = { version = "0.2" }
+alloy-rpc-types = { version = "0.2" }
+
+# Foundry Dependencies
+foundry-common = { git = "https://github.com/foundry-rs/foundry", default-features = true, rev = "26a7559758c192911dd39ce7d621a18ef0d419e6" }
+foundry-compilers = { git = "https://github.com/foundry-rs/foundry", default-features = true, rev = "26a7559758c192911dd39ce7d621a18ef0d419e6" }
+anvil = { git = "https://github.com/foundry-rs/foundry", default-features = true, rev = "26a7559758c192911dd39ce7d621a18ef0d419e6" }
+anvil-core = { git = "https://github.com/foundry-rs/foundry", default-features = true, rev = "26a7559758c192911dd39ce7d621a18ef0d419e6" }
+cast = { git = "https://github.com/foundry-rs/foundry", rev = "26a7559758c192911dd39ce7d621a18ef0d419e6" }
+forge-script = { git = "https://github.com/foundry-rs/foundry", rev = "26a7559758c192911dd39ce7d621a18ef0d419e6" }
 revm = { version = "12.1", features = ["alloydb", "optimism"] }
+
+# Kona + OP Types
+superchain-registry = "0.2.2"
+kona-derive = { git = "https://github.com/ethereum-optimism/kona", rev = "6f7c119d93c854d31de27feadbe11362bafe9cfc", features = ["online"] }
 
 # Internal
 op-test-vectors = { path = "crates/op-test-vectors" }

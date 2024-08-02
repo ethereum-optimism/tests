@@ -49,3 +49,7 @@ clippy:
 # Build for the native target
 build *args='':
   cargo build --workspace --all $@
+
+# Generates all test fixtures for scripts in examples/exec-scripts
+gen fork_url:
+  @just ./examples/exec-scripts/gen {{fork_url}}
