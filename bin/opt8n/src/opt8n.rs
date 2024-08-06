@@ -2,10 +2,7 @@
 
 use alloy_eips::eip2718::Encodable2718;
 use alloy_eips::BlockId;
-use alloy_rpc_types::{
-    anvil::Forking,
-    trace::geth::{PreStateConfig, PreStateFrame},
-};
+use alloy_rpc_types::trace::geth::{PreStateConfig, PreStateFrame};
 use anvil::{cmd::NodeArgs, eth::EthApi, NodeConfig, NodeHandle};
 use anvil_core::eth::block::Block;
 use anvil_core::eth::transaction::PendingTransaction;
