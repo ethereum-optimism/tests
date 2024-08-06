@@ -33,7 +33,6 @@ pub struct Opt8n {
     pub eth_api: EthApi,
     pub node_handle: NodeHandle,
     pub execution_fixture: ExecutionFixture,
-    pub fork: Option<Forking>,
     pub node_config: NodeConfig,
     pub output_file: PathBuf,
 }
@@ -41,7 +40,6 @@ pub struct Opt8n {
 impl Opt8n {
     pub async fn new(
         node_config: Option<NodeConfig>,
-        fork: Option<Forking>,
         output_file: PathBuf,
         genesis: Option<PathBuf>,
     ) -> Result<Self> {
@@ -64,7 +62,6 @@ impl Opt8n {
             eth_api,
             node_handle,
             execution_fixture: ExecutionFixture::default(),
-            fork,
             node_config,
             output_file,
         })
