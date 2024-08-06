@@ -2,10 +2,7 @@
 
 use alloy_eips::eip2718::Encodable2718;
 use alloy_eips::BlockId;
-use alloy_rpc_types::{
-    anvil::Forking,
-    trace::geth::{PreStateConfig, PreStateFrame},
-};
+use alloy_rpc_types::trace::geth::{PreStateConfig, PreStateFrame};
 use anvil::{cmd::NodeArgs, eth::EthApi, NodeConfig, NodeHandle};
 use anvil_core::eth::block::Block;
 use anvil_core::eth::transaction::PendingTransaction;
@@ -33,7 +30,6 @@ pub struct Opt8n {
     pub eth_api: EthApi,
     pub node_handle: NodeHandle,
     pub execution_fixture: ExecutionFixture,
-    pub fork: Option<Forking>,
     pub node_config: NodeConfig,
     pub output_file: PathBuf,
 }
@@ -41,7 +37,6 @@ pub struct Opt8n {
 impl Opt8n {
     pub async fn new(
         node_config: Option<NodeConfig>,
-        fork: Option<Forking>,
         output_file: PathBuf,
         genesis: Option<PathBuf>,
     ) -> Result<Self> {
@@ -64,7 +59,6 @@ impl Opt8n {
             eth_api,
             node_handle,
             execution_fixture: ExecutionFixture::default(),
-            fork,
             node_config,
             output_file,
         })

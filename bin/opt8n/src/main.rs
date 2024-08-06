@@ -1,7 +1,6 @@
 pub mod opt8n;
 use std::path::PathBuf;
 
-use alloy_rpc_types::anvil::Forking;
 use anvil::cmd::NodeArgs;
 use clap::Parser;
 use color_eyre::eyre;
@@ -59,16 +58,15 @@ async fn main() -> eyre::Result<()> {
     let node_args = args.node_args.clone();
     let opt8n_args = args.command.get_opt8n_args();
 
-    let evm_options = node_args.evm_opts.clone();
-    let forking = evm_options.fork_url.as_ref().map(|fork_url| Forking {
-        json_rpc_url: Some(fork_url.url.clone()),
-        block_number: evm_options.fork_block_number,
-    });
+    if node_args.evm_opts.fork_url.is_some() || node_args.evm_opts.fork_block_number.is_some() {
+        return Err(eyre::eyre!(
+            "Forking is not supported in opt8n, please specify prestate with a genesis file"
+        ));
+    }
 
     let node_config = node_args.clone().into_node_config();
     let mut opt8n = Opt8n::new(
         Some(node_config),
-        forking,
         opt8n_args.output.clone(),
         opt8n_args.genesis.clone(),
     )
