@@ -1,10 +1,13 @@
+pub mod cmd;
 pub mod opt8n;
+
 use std::path::PathBuf;
 
 use anvil::cmd::NodeArgs;
 use clap::Parser;
 use color_eyre::eyre;
 use forge_script::ScriptArgs;
+
 use opt8n::Opt8n;
 
 #[derive(Parser, Clone, Debug)]
@@ -25,12 +28,15 @@ pub enum Commands {
         opt8n_args: Opt8nArgs,
     },
     /// Uses a forge script to generate a test vector
-    #[command(visible_alias = "s")]
     Script {
         #[command(flatten)]
         opt8n_args: Opt8nArgs,
         #[command(flatten)]
         script_args: Box<ScriptArgs>,
+    },
+    Server {
+        #[command(flatten)]
+        opt8n_args: Opt8nArgs,
     },
 }
 
