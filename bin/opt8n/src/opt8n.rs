@@ -26,6 +26,14 @@ use revm::{
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, BufReader};
 
+#[derive(Parser, Clone, Debug)]
+pub struct Opt8nArgs {
+    #[clap(long, help = "Output file for the execution test fixture")]
+    pub output: PathBuf,
+    #[clap(long, help = "Path to genesis state")]
+    pub genesis: Option<PathBuf>,
+}
+
 pub struct Opt8n {
     pub eth_api: EthApi,
     pub node_handle: NodeHandle,
@@ -36,10 +44,24 @@ pub struct Opt8n {
 
 impl Opt8n {
     pub async fn new(
-        node_config: Option<NodeConfig>,
+        node_args: Option<NodeArgs>,
         output_file: PathBuf,
         genesis: Option<PathBuf>,
     ) -> Result<Self> {
+        let node_config = if let Some(node_args) = node_args {
+            if node_args.evm_opts.fork_url.is_some()
+                || node_args.evm_opts.fork_block_number.is_some()
+            {
+                return Err(eyre!(
+                    "Forking is not supported in opt8n, please specify prestate with a genesis file"
+                ));
+            }
+
+            Some(node_args.into_node_config())
+        } else {
+            None
+        };
+
         let genesis = if let Some(genesis) = genesis.as_ref() {
             serde_json::from_reader(File::open(genesis)?)?
         } else {
