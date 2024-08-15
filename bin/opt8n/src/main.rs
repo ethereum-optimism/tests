@@ -16,8 +16,6 @@ pub struct Args {
 
 #[derive(Parser, Clone, Debug)]
 pub enum Commands {
-    /// Starts a REPL for running forge, anvil, and cast commands
-    #[command(visible_alias = "r")]
     Repl(ReplArgs),
     Script(ScriptArgs),
     Server(ServerArgs),

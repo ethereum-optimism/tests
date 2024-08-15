@@ -24,7 +24,7 @@ impl ReplArgs {
         )
         .await?;
 
-        opt8n.repl().await?;
+        repl(&mut opt8n).await?;
 
         Ok(())
     }
