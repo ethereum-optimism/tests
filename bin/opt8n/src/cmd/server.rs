@@ -13,6 +13,13 @@ pub struct ServerArgs {
 
 impl ServerArgs {
     pub async fn run(&self) -> color_eyre::Result<()> {
+        let mut opt8n = Opt8n::new(
+            Some(self.node_args.clone()),
+            self.opt8n_args.output.clone(),
+            self.opt8n_args.genesis.clone(),
+        )
+        .await?;
+
         Ok(())
     }
 }
