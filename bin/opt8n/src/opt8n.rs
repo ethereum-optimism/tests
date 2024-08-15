@@ -8,7 +8,6 @@ use anvil_core::eth::block::Block;
 use anvil_core::eth::transaction::PendingTransaction;
 use cast::traces::{GethTraceBuilder, TracingInspectorConfig};
 use clap::Parser;
-use forge_script::ScriptArgs;
 use std::{
     error::Error,
     fs::{self, File},
