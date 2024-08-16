@@ -94,7 +94,7 @@ impl FromL2 {
 
         // TODO: Temporary patch to provide all span batch data to check.
         // 100 blocks before the start block.
-        for i in (self.start_block.saturating_sub(100)..self.start_block).rev() {
+        for i in (self.start_block.saturating_sub(500)..self.start_block).rev() {
             let l2_block_info = l2_provider
                 .l2_block_info_by_number(i)
                 .await
