@@ -87,6 +87,7 @@ impl FromL1 {
             .map_err(|e| eyre!(e))?;
         configs.insert(l2_cursor.block_info.number, first_system_config);
         l2_block_infos.insert(l2_cursor.block_info.number, l2_cursor);
+        let start_l2_cursor = l2_cursor.block_info.number;
 
         // Run the pipeline
         loop {
@@ -183,6 +184,8 @@ impl FromL1 {
             payloads,
             configs,
             l2_block_infos,
+            start_l2_cursor,
+            self.end_block,
         );
         info!(target: "from-l1", "Successfully built derivation test fixture");
 

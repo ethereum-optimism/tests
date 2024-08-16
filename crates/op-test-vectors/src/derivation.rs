@@ -21,6 +21,13 @@ pub struct DerivationFixture {
     pub l2_system_configs: HashMap<u64, SystemConfig>,
     /// L2 block numbers mapped to their block info.
     pub l2_block_infos: HashMap<u64, L2BlockInfo>,
+    /// The L2 block number to start derivation at.
+    pub l2_cursor_start: u64,
+    /// The ending L2 cursor (exclusive).
+    ///
+    /// For example, if the starting L2 cursor is 1 and the ending L2 cursor is 3,
+    /// the range of L2 blocks to derive is [1, 3).
+    pub l2_cursor_end: u64,
 }
 
 impl DerivationFixture {
@@ -31,6 +38,8 @@ impl DerivationFixture {
         l2_payloads: HashMap<u64, L2PayloadAttributes>,
         configs: HashMap<u64, SystemConfig>,
         l2_infos: HashMap<u64, L2BlockInfo>,
+        l2_cursor_start: u64,
+        l2_cursor_end: u64,
     ) -> Self {
         Self {
             rollup_config,
@@ -38,6 +47,8 @@ impl DerivationFixture {
             l2_payloads,
             l2_system_configs: configs,
             l2_block_infos: l2_infos,
+            l2_cursor_start,
+            l2_cursor_end,
         }
     }
 }
@@ -352,6 +363,8 @@ mod tests {
             l2_payloads: ref_payload_attributes(),
             l2_system_configs: ref_system_configs(),
             l2_block_infos: ref_l2_block_infos(),
+            l2_cursor_start: 1,
+            l2_cursor_end: 3,
         };
         assert_eq!(fixture, expected);
     }

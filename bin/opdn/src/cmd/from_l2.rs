@@ -90,6 +90,7 @@ impl FromL2 {
             .map_err(|e| eyre!(e))?;
         configs.insert(l2_cursor.block_info.number, first_system_config);
         l2_block_infos.insert(l2_cursor.block_info.number, l2_cursor);
+        let start_l2_cursor = l2_cursor.block_info.number;
 
         // TODO: Temporary patch to provide all span batch data to check.
         // 100 blocks before the start block.
@@ -201,6 +202,8 @@ impl FromL2 {
             payloads,
             configs,
             l2_block_infos,
+            start_l2_cursor,
+            self.end_block,
         );
         info!(target: TARGET, "Successfully built derivation test fixture");
 
