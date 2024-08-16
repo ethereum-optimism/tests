@@ -91,6 +91,21 @@ impl FromL2 {
         configs.insert(l2_cursor.block_info.number, first_system_config);
         l2_block_infos.insert(l2_cursor.block_info.number, l2_cursor);
 
+        // TODO: Temporary patch to provide all span batch data to check.
+        // 100 blocks before the start block.
+        for i in (self.start_block.saturating_sub(100)..self.start_block).rev() {
+            let l2_block_info = l2_provider
+                .l2_block_info_by_number(i)
+                .await
+                .map_err(|e| eyre!(e))?;
+            let system_config = l2_provider
+                .system_config_by_number(i, Arc::clone(&cfg))
+                .await
+                .map_err(|e| eyre!(e))?;
+            configs.insert(i, system_config);
+            l2_block_infos.insert(i, l2_block_info);
+        }
+
         // Run the pipeline
         loop {
             // If the cursor is beyond the end block, break the loop.
