@@ -1,6 +1,6 @@
 [workspace]
 members = ["crates/*", "bin/*"]
-default-members = ["bin/opt8n", "bin/opd8n", "bin/range-finder"]
+default-members = ["bin/opt8n", "bin/opdn", "bin/range-finder"]
 resolver = "2"
 
 [workspace.package]

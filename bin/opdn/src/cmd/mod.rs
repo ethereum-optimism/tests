@@ -11,7 +11,7 @@ pub mod from_l2;
 pub mod info;
 pub use fixtures::build_fixture_blocks;
 
-/// Main opd8n CLI
+/// Main CLI
 #[derive(Parser, Clone, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Cli {

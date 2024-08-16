@@ -8,7 +8,7 @@ use reqwest::Url;
 use std::sync::Arc;
 use superchain_registry::ROLLUP_CONFIGS;
 
-/// CLI arguments for the `info` subcommand of `opd8n`.
+/// CLI arguments for the `info` subcommand of `opdn`.
 #[derive(Parser, Clone, Debug)]
 pub struct Info {
     /// The L2 Chain ID

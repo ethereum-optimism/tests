@@ -20,7 +20,7 @@ use tracing::{debug, error, info, trace, warn};
 /// The logging target to use for [tracing].
 const TARGET: &str = "from-l1";
 
-/// CLI arguments for the `from-l1` subcommand of `opd8n`.
+/// CLI arguments for the `from-l1` subcommand of `opdn`.
 #[derive(Parser, Clone, Debug)]
 pub struct FromL1 {
     /// The L1 block number to start from
