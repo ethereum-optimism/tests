@@ -108,6 +108,15 @@ impl FromL2 {
                 .map_err(|e| eyre!(e))?;
             configs.insert(i, system_config);
             l2_block_infos.insert(i, l2_block_info);
+            // Get reference payloads by l2 block number for span batch validation
+            let l2_payload = l2_provider
+                .payload_by_number(i)
+                .await
+                .map_err(|e| eyre!(e))?;
+            ref_payloads.insert(
+                i,
+                crate::cmd::util::to_payload_attributes(l2_payload),
+            );
         }
 
         // Run the pipeline
@@ -181,16 +190,6 @@ impl FromL2 {
                 .map_err(|e| eyre!(e))?;
             configs.insert(l2_cursor.block_info.number, system_config);
             l2_block_infos.insert(l2_cursor.block_info.number, l2_cursor);
-
-            // Get reference payloads by l2 block number for span batch validation
-            let l2_payload = l2_provider
-                .payload_by_number(l2_cursor.block_info.number)
-                .await
-                .map_err(|e| eyre!(e))?;
-            ref_payloads.insert(
-                l2_cursor.block_info.number,
-                crate::cmd::util::to_payload_attributes(l2_payload),
-            );
         }
 
         // Take the full L1 range of blocks and get all needed data.
