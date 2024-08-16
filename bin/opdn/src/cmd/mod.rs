@@ -9,6 +9,7 @@ pub mod fixtures;
 pub mod from_l1;
 pub mod from_l2;
 pub mod info;
+pub mod util;
 pub use fixtures::build_fixture_blocks;
 
 /// Main CLI

@@ -79,6 +79,9 @@ impl FromL2 {
         // Collect the output payload attributes.
         let mut payloads = HashMap::new();
 
+        // Collect reference payloads for span batch validation.
+        let mut ref_payloads = HashMap::new();
+
         // Track the earliest l1 block and last l1 block.
         let first_l1_block = l2_cursor.l1_origin.number;
         let mut last_l1_block = l2_cursor.block_info.number;
@@ -178,6 +181,16 @@ impl FromL2 {
                 .map_err(|e| eyre!(e))?;
             configs.insert(l2_cursor.block_info.number, system_config);
             l2_block_infos.insert(l2_cursor.block_info.number, l2_cursor);
+
+            // Get reference payloads by l2 block number for span batch validation
+            let l2_payload = l2_provider
+                .payload_by_number(l2_cursor.block_info.number)
+                .await
+                .map_err(|e| eyre!(e))?;
+            ref_payloads.insert(
+                l2_cursor.block_info.number,
+                crate::cmd::util::to_payload_attributes(l2_payload),
+            );
         }
 
         // Take the full L1 range of blocks and get all needed data.
@@ -196,15 +209,16 @@ impl FromL2 {
             &mut blob_provider,
         )
         .await?;
-        let fixture = DerivationFixture::new(
-            Arc::unwrap_or_clone(cfg),
-            blocks,
-            payloads,
-            configs,
+        let fixture = DerivationFixture {
+            rollup_config: Arc::unwrap_or_clone(cfg),
+            l1_blocks: blocks,
+            l2_payloads: payloads,
+            ref_payloads,
+            l2_system_configs: configs,
             l2_block_infos,
-            start_l2_cursor,
-            self.end_block,
-        );
+            l2_cursor_start: start_l2_cursor,
+            l2_cursor_end: self.end_block,
+        };
         info!(target: TARGET, "Successfully built derivation test fixture");
 
         // Write the derivation fixture to the specified output location.

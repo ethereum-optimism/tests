@@ -1,4 +1,5 @@
 {
+  "refPayloads": {},
   "l2CursorStart": 1,
   "l2CursorEnd": 3,
   "rollupConfig": {

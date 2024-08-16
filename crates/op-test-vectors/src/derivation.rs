@@ -17,6 +17,9 @@ pub struct DerivationFixture {
     pub l1_blocks: Vec<FixtureBlock>,
     /// A map of L2 block number to l2 payload attributes.
     pub l2_payloads: HashMap<u64, L2PayloadAttributes>,
+    /// A map of l2 block number to reference payloads.
+    /// These are used for span batch validation.
+    pub ref_payloads: HashMap<u64, L2PayloadAttributes>,
     /// A map of L2 block numbers to system configs.
     pub l2_system_configs: HashMap<u64, SystemConfig>,
     /// L2 block numbers mapped to their block info.
@@ -28,29 +31,6 @@ pub struct DerivationFixture {
     /// For example, if the starting L2 cursor is 1 and the ending L2 cursor is 3,
     /// the range of L2 blocks to derive is [1, 3).
     pub l2_cursor_end: u64,
-}
-
-impl DerivationFixture {
-    /// Constructs a new [DerivationFixture] with the given L1 blocks and L2 Payload Attributes.
-    pub fn new(
-        rollup_config: RollupConfig,
-        l1_blocks: Vec<FixtureBlock>,
-        l2_payloads: HashMap<u64, L2PayloadAttributes>,
-        configs: HashMap<u64, SystemConfig>,
-        l2_infos: HashMap<u64, L2BlockInfo>,
-        l2_cursor_start: u64,
-        l2_cursor_end: u64,
-    ) -> Self {
-        Self {
-            rollup_config,
-            l1_blocks,
-            l2_payloads,
-            l2_system_configs: configs,
-            l2_block_infos: l2_infos,
-            l2_cursor_start,
-            l2_cursor_end,
-        }
-    }
 }
 
 /// A fixture block is a minimal block with associated data including blobs
@@ -363,6 +343,7 @@ mod tests {
             l2_payloads: ref_payload_attributes(),
             l2_system_configs: ref_system_configs(),
             l2_block_infos: ref_l2_block_infos(),
+            ref_payloads: HashMap::new(),
             l2_cursor_start: 1,
             l2_cursor_end: 3,
         };
