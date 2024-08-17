@@ -1,4 +1,3 @@
-use alloy_rpc_types::error;
 use anvil::cmd::NodeArgs;
 use axum::body::{Body, Bytes};
 use axum::extract::State;
