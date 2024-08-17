@@ -70,10 +70,14 @@ async fn dump_execution_fixture(State(opt8n): State<Arc<Mutex<Opt8n>>>) -> Resul
 }
 
 async fn fallback_handler(
-    State(opt8n): State<Arc<Opt8n>>,
+    State(opt8n): State<Arc<Mutex<Opt8n>>>,
     req: Request<Body>,
 ) -> Result<(), ServerError> {
-    todo!()
+    let opt8n = opt8n.lock().await;
+
+    // TODO: Forward request to the ETH api
+
+    Ok(())
 }
 
 #[derive(Error, Debug)]
