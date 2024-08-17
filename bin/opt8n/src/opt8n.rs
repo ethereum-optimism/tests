@@ -8,7 +8,6 @@ use anvil_core::eth::block::Block;
 use anvil_core::eth::transaction::PendingTransaction;
 use cast::traces::{GethTraceBuilder, TracingInspectorConfig};
 use clap::Parser;
-use forge_script::ScriptArgs;
 use std::{
     error::Error,
     fs::{self, File},
@@ -16,7 +15,6 @@ use std::{
 };
 
 use color_eyre::eyre::{ensure, eyre, Result};
-use futures::StreamExt;
 use op_test_vectors::execution::{ExecutionFixture, ExecutionReceipt, ExecutionResult};
 use revm::{
     db::{AlloyDB, CacheDB},

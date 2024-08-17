@@ -4649,6 +4649,7 @@ dependencies = [
  "alloy-rpc-types",
  "anvil",
  "anvil-core",
+ "axum",
  "cast",
  "clap",
  "color-eyre",

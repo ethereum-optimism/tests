@@ -24,6 +24,7 @@ futures = "0.3"
 clap = { version = "4", features = ["derive"] }
 shellwords = "1"
 reqwest = "0.12"
+axum = "0.7.5"
 tracing-subscriber = "0.3.18"
 
 # Alloy Dependencies
@@ -45,7 +46,9 @@ revm = { version = "12.1", features = ["alloydb", "optimism"] }
 
 # Kona + OP Types
 superchain-registry = "0.2.2"
-kona-derive = { git = "https://github.com/ethereum-optimism/kona", rev = "6f7c119d93c854d31de27feadbe11362bafe9cfc", features = ["online"] }
+kona-derive = { git = "https://github.com/ethereum-optimism/kona", rev = "6f7c119d93c854d31de27feadbe11362bafe9cfc", features = [
+    "online",
+] }
 
 # Internal
 op-test-vectors = { path = "crates/op-test-vectors" }
