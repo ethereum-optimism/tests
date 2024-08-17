@@ -6,14 +6,13 @@ use axum::response::{IntoResponse, Response};
 use clap::Parser;
 use color_eyre::eyre::eyre;
 use color_eyre::owo_colors::OwoColorize;
-use foundry_common::shell::println;
 use futures::StreamExt;
 use http_body_util::BodyExt;
-use std::fmt::format;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::net::TcpListener;
+use tokio::sync::mpsc::Sender;
 use tokio::sync::Mutex;
 
 use crate::opt8n::{Opt8n, Opt8nArgs};
@@ -38,10 +37,16 @@ impl ServerArgs {
         let opt8n = Arc::new(Mutex::new(opt8n));
 
         let (dump_tx, mut dump_rx) = tokio::sync::mpsc::channel::<()>(1);
-        let router = axum::Router::new()
+
+        let dump_fixture_router = axum::Router::new()
             .route("/dump_fixture", axum::routing::post(dump_execution_fixture))
+            .with_state((opt8n.clone(), dump_tx));
+
+        let fallback_router = axum::Router::new()
             .fallback(fallback_handler)
             .with_state(opt8n);
+
+        let router = dump_fixture_router.merge(fallback_router);
 
         let addr: SocketAddr = ([127, 0, 0, 1], 0).into();
         let listener = TcpListener::bind(addr).await?;
@@ -56,6 +61,7 @@ impl ServerArgs {
                }
 
                _ = dump_rx.recv() => {
+                let _ = println!("Exuction fixture dumped to: {:#?}", self.opt8n_args.output).green();
 
                }
         }
@@ -64,7 +70,9 @@ impl ServerArgs {
     }
 }
 
-async fn dump_execution_fixture(State(opt8n): State<Arc<Mutex<Opt8n>>>) -> Result<(), ServerError> {
+async fn dump_execution_fixture(
+    State((opt8n, dump_tx)): State<(Arc<Mutex<Opt8n>>, Sender<()>)>,
+) -> Result<(), ServerError> {
     let mut opt8n = opt8n.lock().await;
 
     let mut new_blocks = opt8n.eth_api.backend.new_block_notifications();
@@ -82,6 +90,8 @@ async fn dump_execution_fixture(State(opt8n): State<Arc<Mutex<Opt8n>>>) -> Resul
             .await
             .map_err(ServerError::Opt8nError)?;
     }
+
+    dump_tx.send(());
 
     Ok(())
 }
