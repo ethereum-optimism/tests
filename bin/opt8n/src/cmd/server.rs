@@ -5,8 +5,11 @@ use axum::http::{Request, StatusCode};
 use axum::response::{IntoResponse, Response};
 use clap::Parser;
 use color_eyre::eyre::eyre;
+use color_eyre::owo_colors::OwoColorize;
+use foundry_common::shell::println;
 use futures::StreamExt;
 use http_body_util::BodyExt;
+use std::fmt::format;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use thiserror::Error;
@@ -34,6 +37,7 @@ impl ServerArgs {
 
         let opt8n = Arc::new(Mutex::new(opt8n));
 
+        let (dump_tx, mut dump_rx) = tokio::sync::mpsc::channel::<()>(1);
         let router = axum::Router::new()
             .route("/dump_fixture", axum::routing::post(dump_execution_fixture))
             .fallback(fallback_handler)
@@ -41,8 +45,20 @@ impl ServerArgs {
 
         let addr: SocketAddr = ([127, 0, 0, 1], 0).into();
         let listener = TcpListener::bind(addr).await?;
+        let local_addr = listener.local_addr()?;
 
-        axum::serve(listener, router.into_make_service()).await?;
+        let server = axum::serve(listener, router.into_make_service());
+        let _ = println!("Opt8n server listening on: {:#?}", local_addr).green();
+
+        tokio::select! {
+               err = server => {
+                 todo!("Handle error")
+               }
+
+               _ = dump_rx.recv() => {
+
+               }
+        }
 
         Ok(())
     }
@@ -84,8 +100,6 @@ pub async fn proxy_to_anvil(
     anvil_endpoint: String,
 ) -> Result<Response<Body>, ServerError> {
     let http_client = reqwest::Client::new();
-
-    // add endpoiint to request
 
     let (headers, body) = req.into_parts();
     let body = body
