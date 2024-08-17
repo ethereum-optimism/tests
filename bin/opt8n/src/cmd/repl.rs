@@ -1,6 +1,5 @@
 use anvil::cmd::NodeArgs;
 use clap::{CommandFactory, FromArgMatches, Parser};
-use color_eyre::eyre::eyre;
 use futures::StreamExt;
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, BufReader};
