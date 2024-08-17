@@ -1,11 +1,13 @@
+use alloy_rpc_types::error;
 use anvil::cmd::NodeArgs;
-use axum::body::Body;
+use axum::body::{Body, Bytes};
 use axum::extract::State;
 use axum::http::{Request, StatusCode};
 use axum::response::{IntoResponse, Response};
 use clap::Parser;
 use color_eyre::eyre::eyre;
 use futures::StreamExt;
+use http_body_util::BodyExt;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use thiserror::Error;
@@ -24,7 +26,7 @@ pub struct ServerArgs {
 
 impl ServerArgs {
     pub async fn run(&self) -> color_eyre::Result<()> {
-        let mut opt8n = Opt8n::new(
+        let opt8n = Opt8n::new(
             Some(self.node_args.clone()),
             self.opt8n_args.output.clone(),
             self.opt8n_args.genesis.clone(),
@@ -73,23 +75,64 @@ async fn fallback_handler(
     State(opt8n): State<Arc<Mutex<Opt8n>>>,
     req: Request<Body>,
 ) -> Result<(), ServerError> {
-    let opt8n = opt8n.lock().await;
-
-    // TODO: Forward request to the ETH api
-
+    let anvil_endpoint = opt8n.lock().await.node_handle.http_endpoint();
+    proxy_to_anvil(req, anvil_endpoint).await?;
     Ok(())
+}
+
+pub async fn proxy_to_anvil(
+    req: Request<Body>,
+    anvil_endpoint: String,
+) -> Result<Response<Body>, ServerError> {
+    let http_client = reqwest::Client::new();
+
+    // add endpoiint to request
+
+    let (headers, body) = req.into_parts();
+    let body = body
+        .collect()
+        .await
+        .map_err(ServerError::AxumError)?
+        .to_bytes();
+
+    let axum_req: Request<Bytes> = Request::from_parts(headers, body);
+    let mut req = reqwest::Request::try_from(axum_req).expect("TODO: handle error");
+    req.url_mut().set_fragment(Some(&anvil_endpoint));
+
+    let res: Response<reqwest::Body> = http_client
+        .execute(req)
+        .await
+        .expect("TODO: handle error ")
+        .into();
+
+    let (headers, body) = res.into_parts();
+
+    let body = body
+        .collect()
+        .await
+        .map_err(ServerError::ReqwestError)?
+        .to_bytes()
+        .into();
+
+    Ok(Response::from_parts(headers, body))
 }
 
 #[derive(Error, Debug)]
 pub enum ServerError {
     #[error("Opt8n error: {0}")]
     Opt8nError(color_eyre::Report),
+    #[error("Axum error: {0}")]
+    AxumError(axum::Error),
+    #[error("Reqwest error: {0}")]
+    ReqwestError(reqwest::Error),
 }
 
 impl IntoResponse for ServerError {
     fn into_response(self) -> Response {
         let message = match self {
             ServerError::Opt8nError(err) => err.to_string(),
+            ServerError::ReqwestError(err) => err.to_string(),
+            ServerError::AxumError(err) => err.to_string(),
         };
 
         let body = Body::from(message);

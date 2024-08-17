@@ -16,7 +16,8 @@ tracing.workspace = true
 tokio.workspace = true
 futures.workspace = true
 color-eyre.workspace = true
-axum.workspace = true
+axum = "0.7.5"
+http-body-util = "0.1.2"
 
 # CLI
 clap.workspace = true
@@ -38,3 +39,4 @@ revm.workspace = true
 op-test-vectors.workspace = true
 op-alloy-rpc-types.workspace = true
 thiserror.workspace = true
+reqwest.workspace = true
