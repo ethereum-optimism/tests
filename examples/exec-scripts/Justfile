@@ -29,3 +29,10 @@ gen-governance-token fork_url: install-opt8n forge-updates
 # Generates the execution test fixture for the multicall3 preinstall script
 gen-multicall3 fork_url: install-opt8n forge-updates
   opt8n --fork-url {{fork_url}} script --output ../../fixtures/execution/Multicall3Preinstall.json Multicall3Preinstall
+
+# Generates the execution test fixture for the SelfDestruct precompile script
+gen-self-destruct: install-opt8n forge-updates
+  opt8n script --output ../../fixtures/execution/SelfDestructPrecompile.json SelfDestructPrecompile -- --hardfork regolith
+
+gen-self-destruct-regolith: install-opt8n forge-updates
+  opt8n script --output ../../fixtures/execution/SelfDestructPrecompilePostRegolith.json SelfDestructPrecompile -- --hardfork canyon
