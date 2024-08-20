@@ -58,7 +58,7 @@ impl ServerArgs {
 
         tokio::select! {
                err = server => {
-                 todo!("Handle error")
+                 todo!("Handle server error: {:#?}", err);
                }
 
                _ = dump_rx.recv() => {
@@ -80,7 +80,7 @@ async fn dump_execution_fixture(
     Ok(())
 }
 
-async fn mine_prestate(State(opt8n): State<(Arc<Mutex<Opt8n>>)>) -> Result<(), ServerError> {
+async fn mine_prestate(State(opt8n): State<Arc<Mutex<Opt8n>>>) -> Result<(), ServerError> {
     mine_block(opt8n.clone()).await?;
     Ok(())
 }

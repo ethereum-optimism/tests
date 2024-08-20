@@ -1,4 +1,4 @@
-use anvil::{cmd::NodeArgs, Hardfork};
+use anvil::cmd::NodeArgs;
 use clap::{Parser, ValueHint};
 use color_eyre::eyre::eyre;
 use futures::StreamExt;
@@ -18,7 +18,7 @@ pub struct ScriptArgs {
 }
 
 impl ScriptArgs {
-    pub async fn run(mut self) -> color_eyre::Result<()> {
+    pub async fn run(self) -> color_eyre::Result<()> {
         let opt8n = Opt8n::new(
             Some(self.node_args.clone()),
             self.opt8n_args.output.clone(),
@@ -26,8 +26,10 @@ impl ScriptArgs {
         )
         .await?;
 
-        let mut script_args = forge_script::ScriptArgs::default();
-        script_args.path = self.path.clone();
+        let mut script_args = forge_script::ScriptArgs {
+            path: self.path.clone(),
+            ..Default::default()
+        };
 
         foundry_common::shell::set_shell(foundry_common::shell::Shell::from_args(
             script_args.opts.silent,
