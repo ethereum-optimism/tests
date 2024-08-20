@@ -1,7 +1,7 @@
 use anvil::cmd::NodeArgs;
 use clap::Parser;
 
-use crate::opt8n::{Opt8n, Opt8nArgs};
+use crate::opt8n::Opt8nArgs;
 
 #[derive(Parser, Clone, Debug)]
 pub struct ServerArgs {
