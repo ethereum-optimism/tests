@@ -42,11 +42,12 @@ impl ServerArgs {
             .route("/dump_fixture", axum::routing::post(dump_execution_fixture))
             .with_state((opt8n.clone(), dump_tx));
 
-        let fallback_router = axum::Router::new()
+        let router = axum::Router::new()
+            .route("/mine_prestate", axum::routing::post(mine_prestate))
             .fallback(fallback_handler)
             .with_state(opt8n);
 
-        let router = dump_fixture_router.merge(fallback_router);
+        let router = dump_fixture_router.merge(router);
 
         let addr: SocketAddr = ([127, 0, 0, 1], 0).into();
         let listener = TcpListener::bind(addr).await?;
@@ -73,6 +74,18 @@ impl ServerArgs {
 async fn dump_execution_fixture(
     State((opt8n, dump_tx)): State<(Arc<Mutex<Opt8n>>, Sender<()>)>,
 ) -> Result<(), ServerError> {
+    mine_block(opt8n).await?;
+    dump_tx.send(()).await.map_err(ServerError::SendError)?;
+
+    Ok(())
+}
+
+async fn mine_prestate(State(opt8n): State<(Arc<Mutex<Opt8n>>)>) -> Result<(), ServerError> {
+    mine_block(opt8n.clone()).await?;
+    Ok(())
+}
+
+async fn mine_block(opt8n: Arc<Mutex<Opt8n>>) -> Result<(), ServerError> {
     let mut opt8n = opt8n.lock().await;
 
     let mut new_blocks = opt8n.eth_api.backend.new_block_notifications();
@@ -90,8 +103,6 @@ async fn dump_execution_fixture(
             .await
             .map_err(ServerError::Opt8nError)?;
     }
-
-    dump_tx.send(());
 
     Ok(())
 }
@@ -148,6 +159,8 @@ pub enum ServerError {
     AxumError(axum::Error),
     #[error("Reqwest error: {0}")]
     ReqwestError(reqwest::Error),
+    #[error("Senderror: {0}")]
+    SendError(tokio::sync::mpsc::error::SendError<()>),
 }
 
 impl IntoResponse for ServerError {
@@ -156,6 +169,7 @@ impl IntoResponse for ServerError {
             ServerError::Opt8nError(err) => err.to_string(),
             ServerError::ReqwestError(err) => err.to_string(),
             ServerError::AxumError(err) => err.to_string(),
+            ServerError::SendError(err) => err.to_string(),
         };
 
         let body = Body::from(message);
