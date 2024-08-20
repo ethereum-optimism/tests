@@ -9,8 +9,6 @@ use crate::opt8n::{Opt8n, Opt8nArgs};
 pub struct ScriptArgs {
     #[command(flatten)]
     opt8n_args: Opt8nArgs,
-    // #[command(flatten)]
-    // inner: forge_script::ScriptArgs,
     #[arg(value_hint = ValueHint::FilePath)]
     pub path: String,
     #[command(flatten)]
