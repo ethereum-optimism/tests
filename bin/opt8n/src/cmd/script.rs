@@ -1,5 +1,5 @@
-use anvil::cmd::NodeArgs;
-use clap::Parser;
+use anvil::{cmd::NodeArgs, Hardfork};
+use clap::{Parser, ValueHint};
 use color_eyre::eyre::eyre;
 use futures::StreamExt;
 
@@ -9,8 +9,10 @@ use crate::opt8n::{Opt8n, Opt8nArgs};
 pub struct ScriptArgs {
     #[command(flatten)]
     opt8n_args: Opt8nArgs,
-    #[command(flatten)]
-    inner: forge_script::ScriptArgs,
+    // #[command(flatten)]
+    // inner: forge_script::ScriptArgs,
+    #[arg(value_hint = ValueHint::FilePath)]
+    pub path: String,
     #[command(flatten)]
     pub node_args: NodeArgs,
 }
@@ -24,23 +26,26 @@ impl ScriptArgs {
         )
         .await?;
 
+        let mut script_args = forge_script::ScriptArgs::default();
+        script_args.path = self.path.clone();
+
         foundry_common::shell::set_shell(foundry_common::shell::Shell::from_args(
-            self.inner.opts.silent,
-            self.inner.json,
+            script_args.opts.silent,
+            script_args.json,
         ))?;
 
-        self.inner.broadcast = true;
-        self.inner.evm_opts.sender = Some(
+        script_args.broadcast = true;
+        script_args.evm_opts.sender = Some(
             opt8n
                 .node_handle
                 .genesis_accounts()
                 .last()
                 .expect("Could not get genesis account"),
         );
-        self.inner.unlocked = true;
-        self.inner.evm_opts.fork_url = Some(opt8n.node_handle.http_endpoint());
+        script_args.unlocked = true;
+        script_args.evm_opts.fork_url = Some(opt8n.node_handle.http_endpoint());
 
-        run_script(opt8n, Box::new(self.inner)).await?;
+        run_script(opt8n, Box::new(script_args)).await?;
 
         Ok(())
     }
