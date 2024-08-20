@@ -15,7 +15,6 @@ use std::{
 };
 
 use color_eyre::eyre::{ensure, eyre, Result};
-use futures::StreamExt;
 use op_test_vectors::execution::{ExecutionFixture, ExecutionReceipt, ExecutionResult};
 use revm::{
     db::{AlloyDB, CacheDB},
