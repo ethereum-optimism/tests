@@ -1,7 +1,8 @@
 //! Module containing the fault proof test fixture.
 
-use alloy_primitives::{BlockNumber, Bytes, ChainId, B256, U256};
+use alloy_primitives::{BlockHash, BlockNumber, Bytes, ChainId, B256, U256};
 use serde::{Deserialize, Serialize};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 use hashbrown::HashMap;
 
 /// The fault proof fixture is the top-level object that contains
@@ -22,9 +23,9 @@ pub struct FaultProofFixture {
 #[serde(rename_all = "camelCase")]
 pub struct FaultProofInputs {
   /// The L1 head block hash.
-  pub l1_head: B256,
+  pub l1_head: BlockHash,
   /// The L2 head block hash.
-  pub l2_head: B256,
+  pub l2_head: BlockHash,
   /// The claimed L2 output root to validate.
   pub l2_claim: B256,
   /// The agreed L2 output root to start derivation from.
@@ -36,15 +37,18 @@ pub struct FaultProofInputs {
 }
 
 /// The fault proof status is the result of executing the fault proof program.
-#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Eq)]
+#[derive(Serialize_repr, Deserialize_repr, Debug, Default, PartialEq, Eq)]
+#[repr(u8)]
 pub enum FaultProofStatus {
   /// The claim is valid.
   #[default]
-  Valid,
+  Valid = 0,
   /// The claim is invalid.
-  Invalid,
+  Invalid = 1,
   /// Executing the program resulted in a panic.
-  Panic,
+  Panic = 2,
+  /// The program has not exited.
+  Unfinished = 3,
   /// The status is unknown.
   Unknown
 }
@@ -59,6 +63,7 @@ mod tests {
       FaultProofStatus::Valid,
       FaultProofStatus::Invalid,
       FaultProofStatus::Panic,
+      FaultProofStatus::Unfinished,
       FaultProofStatus::Unknown,
     ];
 
