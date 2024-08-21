@@ -1,7 +1,7 @@
 # OP Test Vectors Book
 
 This repository contains the source code for the OP Test vectors book,
-which is available at [ethereum-optimism.github.io/op-test-vectors](https://ethereum-optimism.github.io/op-test-vectors/).
+which is available at [ethereum-optimism.github.io/tests](https://ethereum-optimism.github.io/tests/).
 
 ## Contributing
 
