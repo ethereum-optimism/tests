@@ -8,11 +8,11 @@
 
 <!-- Kona links -->
 
-[op-test-vectors]: https://github.com/ethereum-optimism/op-test-vectors
-[book]: https://ethereum-optimism.github.io/op-test-vectors/
-[issues]: https://github.com/ethereum-optimism/op-test-vectors/issues
-[new-issue]: https://github.com/ethereum-optimism/op-test-vectors/issues/new
-[contributing]: https://github.com/ethereum-optimism/op-test-vectors/tree/main/CONTRIBUTING.md
+[op-test-vectors]: https://github.com/ethereum-optimism/tests
+[book]: https://ethereum-optimism.github.io/tests/
+[issues]: https://github.com/ethereum-optimism/tests/issues
+[new-issue]: https://github.com/ethereum-optimism/tests/issues/new
+[contributing]: https://github.com/ethereum-optimism/tests/tree/main/CONTRIBUTING.md
 
 <!-- People -->
 
