@@ -72,6 +72,7 @@ fn extract_blob_data(
                     )
                 }
             },
+            // This is necessary since `TxEnvelope` is marked as non-exhaustive.
             _ => continue,
         };
         let TxKind::Call(to) = tx_kind else { continue };

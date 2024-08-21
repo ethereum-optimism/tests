@@ -7,24 +7,28 @@ use anvil::{cmd::NodeArgs, eth::EthApi, NodeConfig, NodeHandle};
 use anvil_core::eth::block::Block;
 use anvil_core::eth::transaction::PendingTransaction;
 use cast::traces::{GethTraceBuilder, TracingInspectorConfig};
-use forge_script::ScriptArgs;
+use clap::Parser;
 use std::{
     error::Error,
     fs::{self, File},
     path::PathBuf,
 };
 
-use clap::{CommandFactory, FromArgMatches, Parser};
 use color_eyre::eyre::{ensure, eyre, Result};
-use futures::StreamExt;
 use op_test_vectors::execution::{ExecutionFixture, ExecutionReceipt, ExecutionResult};
 use revm::{
     db::{AlloyDB, CacheDB},
     primitives::{BlobExcessGasAndPrice, BlockEnv, CfgEnv, Env, SpecId, U256},
     Database, DatabaseCommit, DatabaseRef, Evm, EvmBuilder,
 };
-use serde::{Deserialize, Serialize};
-use tokio::io::{AsyncBufReadExt, BufReader};
+
+#[derive(Parser, Clone, Debug)]
+pub struct Opt8nArgs {
+    #[clap(long, help = "Output file for the execution test fixture")]
+    pub output: PathBuf,
+    #[clap(long, help = "Path to genesis state")]
+    pub genesis: Option<PathBuf>,
+}
 
 pub struct Opt8n {
     pub eth_api: EthApi,
@@ -36,10 +40,24 @@ pub struct Opt8n {
 
 impl Opt8n {
     pub async fn new(
-        node_config: Option<NodeConfig>,
+        node_args: Option<NodeArgs>,
         output_file: PathBuf,
         genesis: Option<PathBuf>,
     ) -> Result<Self> {
+        let node_config = if let Some(node_args) = node_args {
+            if node_args.evm_opts.fork_url.is_some()
+                || node_args.evm_opts.fork_block_number.is_some()
+            {
+                return Err(eyre!(
+                    "Forking is not supported in opt8n, please specify prestate with a genesis file"
+                ));
+            }
+
+            Some(node_args.into_node_config())
+        } else {
+            None
+        };
+
         let genesis = if let Some(genesis) = genesis.as_ref() {
             serde_json::from_reader(File::open(genesis)?)?
         } else {
@@ -62,141 +80,6 @@ impl Opt8n {
             node_config,
             output_file,
         })
-    }
-
-    /// Listens for commands, and new blocks from the block stream.
-    pub async fn repl(&mut self) -> Result<()> {
-        let mut new_blocks = self.eth_api.backend.new_block_notifications();
-
-        loop {
-            tokio::select! {
-                command = self.receive_command() => {
-                    match command {
-                        Ok(ReplCommand::Exit) => break,
-                        Ok(command) => self.execute(command).await?,
-                        Err(e) => eprintln!("Error: {:?}", e),
-                    }
-                }
-
-                new_block = new_blocks.next() => {
-                    if let Some(new_block) = new_block {
-                        if let Some(block) = self.eth_api.backend.get_block_by_hash(new_block.hash) {
-                            self.generate_execution_fixture(block).await?;
-                        }
-                    }
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Run a Forge script with the given arguments, and generate an execution fixture
-    /// from the broadcasted transactions.
-    pub async fn run_script(self, script_args: Box<ScriptArgs>) -> Result<()> {
-        let mut new_blocks = self.eth_api.backend.new_block_notifications();
-
-        // Run the forge script and broadcast the transactions to the anvil node
-        let mut opt8n = self.broadcast_transactions(script_args).await?;
-
-        // Mine the block and generate the execution fixture
-        opt8n.mine_block().await;
-
-        let block = new_blocks.next().await.ok_or(eyre!("No new block"))?;
-        if let Some(block) = opt8n.eth_api.backend.get_block_by_hash(block.hash) {
-            opt8n.generate_execution_fixture(block).await?;
-        }
-
-        Ok(())
-    }
-
-    async fn broadcast_transactions(self, script_args: Box<ScriptArgs>) -> Result<Self> {
-        // Run the script, compile the transactions and broadcast to the anvil instance
-        let compiled = script_args.preprocess().await?.compile()?;
-
-        let pre_simulation = compiled
-            .link()
-            .await?
-            .prepare_execution()
-            .await?
-            .execute()
-            .await?
-            .prepare_simulation()
-            .await?;
-
-        let bundled = pre_simulation.fill_metadata().await?.bundle().await?;
-
-        let tx_count = bundled
-            .sequence
-            .sequences()
-            .iter()
-            .fold(0, |sum, sequence| sum + sequence.transactions.len());
-
-        // TODO: break into function
-        let broadcast = bundled.broadcast();
-
-        let opt8n = self;
-
-        let pending_transactions = tokio::task::spawn(async move {
-            loop {
-                let pending_tx_count = opt8n
-                    .eth_api
-                    .txpool_content()
-                    .await
-                    .expect("Failed to get txpool content")
-                    .pending
-                    .len();
-
-                if pending_tx_count == tx_count {
-                    return opt8n;
-                }
-            }
-        });
-
-        let opt8n = tokio::select! {
-            _ = broadcast => {
-                // TODO: Gracefully handle this error
-                return Err(eyre!("Script failed early"));
-            },
-            opt8n = pending_transactions => {
-                opt8n?
-            }
-        };
-
-        Ok(opt8n)
-    }
-
-    async fn receive_command(&self) -> Result<ReplCommand> {
-        let line = BufReader::new(tokio::io::stdin())
-            .lines()
-            .next_line()
-            .await?
-            .unwrap();
-        let words = shellwords::split(&line)?;
-
-        let matches = ReplCommand::command().try_get_matches_from(words)?;
-        Ok(ReplCommand::from_arg_matches(&matches)?)
-    }
-
-    async fn execute(&mut self, command: ReplCommand) -> Result<()> {
-        match command {
-            ReplCommand::Dump => {
-                self.mine_block().await;
-            }
-            ReplCommand::Anvil { mut args } => {
-                args.insert(0, "anvil".to_string());
-                let command = NodeArgs::command_for_update();
-                let matches = command.try_get_matches_from(args)?;
-                let node_args = NodeArgs::from_arg_matches(&matches)?;
-                node_args.run().await?;
-            }
-            ReplCommand::Cast { .. } => {}
-            ReplCommand::RpcEndpoint => {
-                println!("{}", self.node_handle.http_endpoint());
-            }
-            ReplCommand::Exit => unreachable!(),
-        }
-        Ok(())
     }
 
     /// Updates the pre and post state allocations of the [ExecutionFixture] from Revm.
@@ -335,27 +218,6 @@ where
         .build();
     evm.modify_spec_id(spec_id);
     evm
-}
-
-#[derive(Parser, Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
-#[clap(rename_all = "snake_case", infer_subcommands = true, multicall = true)]
-pub enum ReplCommand {
-    #[command(visible_alias = "a")]
-    Anvil {
-        #[arg(index = 1, allow_hyphen_values = true)]
-        args: Vec<String>,
-    },
-    #[command(visible_alias = "c")]
-    Cast {
-        #[arg(index = 1, allow_hyphen_values = true)]
-        args: Vec<String>,
-    },
-    Dump,
-    RpcEndpoint,
-    // TODO: implement clear
-    // TODO: implement reset
-    #[command(visible_alias = "e")]
-    Exit,
 }
 
 #[cfg(test)]

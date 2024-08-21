@@ -113,10 +113,7 @@ impl FromL2 {
                 .payload_by_number(i)
                 .await
                 .map_err(|e| eyre!(e))?;
-            ref_payloads.insert(
-                i,
-                crate::cmd::util::to_payload_attributes(l2_payload),
-            );
+            ref_payloads.insert(i, crate::cmd::util::to_payload_attributes(l2_payload));
         }
 
         // Run the pipeline
