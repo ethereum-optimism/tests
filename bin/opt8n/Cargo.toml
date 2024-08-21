@@ -40,3 +40,4 @@ op-test-vectors.workspace = true
 op-alloy-rpc-types.workspace = true
 thiserror.workspace = true
 reqwest.workspace = true
+hyper = "1.4.1"
