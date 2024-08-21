@@ -7,9 +7,9 @@ resolver = "2"
 edition = "2021"
 license = "MIT"
 authors = ["Eric Woolsey<ewoolsey@ualberta.ca>", "refcell"]
-repository = "https://github.com/ethereum-optimism/op-test-vectors"
-homepage = "https://github.com/ethereum-optimism/op-test-vectors"
-exclude = ["**/target", "benches/", "tests"]
+repository = "https://github.com/ethereum-optimism/tests"
+homepage = "https://github.com/ethereum-optimism/tests"
+exclude = ["**/target", "benches/"]
 
 [workspace.dependencies]
 # General
