@@ -3,7 +3,7 @@
 use alloy_eips::eip2718::Encodable2718;
 use alloy_eips::BlockId;
 use alloy_rpc_types::trace::geth::{PreStateConfig, PreStateFrame};
-use anvil::{cmd::NodeArgs, eth::EthApi, NodeConfig, NodeHandle};
+use anvil::{cmd::NodeArgs, eth::EthApi, Hardfork, NodeConfig, NodeHandle};
 use anvil_core::eth::block::Block;
 use anvil_core::eth::transaction::PendingTransaction;
 use cast::traces::{GethTraceBuilder, TracingInspectorConfig};
@@ -13,9 +13,13 @@ use std::{
     fs::{self, File},
     path::PathBuf,
 };
+use tracing::info;
 
 use color_eyre::eyre::{ensure, eyre, Result};
-use op_test_vectors::execution::{ExecutionFixture, ExecutionReceipt, ExecutionResult};
+use op_test_vectors::{
+    execution::{ExecutionFixture, ExecutionReceipt, ExecutionResult},
+    kona_derive::types::Genesis,
+};
 use revm::{
     db::{AlloyDB, CacheDB},
     primitives::{BlobExcessGasAndPrice, BlockEnv, CfgEnv, Env, SpecId, U256},
@@ -42,15 +46,33 @@ impl Opt8n {
     pub async fn new(
         node_args: Option<NodeArgs>,
         output_file: PathBuf,
+        // TODO: Remove the genesis argument
         genesis: Option<PathBuf>,
     ) -> Result<Self> {
-        let node_config = if let Some(node_args) = node_args {
+        let node_config = if let Some(mut node_args) = node_args {
             if node_args.evm_opts.fork_url.is_some()
                 || node_args.evm_opts.fork_block_number.is_some()
             {
                 return Err(eyre!(
                     "Forking is not supported in opt8n, please specify prestate with a genesis file"
                 ));
+            }
+
+            // Assert that the hardfork matches the genesis block
+            // If unspecified, set the genesis block to the fork block
+            if let Some(hardfork) = &node_args.hardfork {
+                let mut genesis = node_args.init.unwrap_or_default();
+                if let Some(number) = genesis.number {
+                    ensure!(
+                        hardfork == &Hardfork::from(number),
+                        "Hardfork does not match genesis block"
+                    );
+                } else {
+                    let fork_block = hardfork.fork_block();
+                    println!("Setting genesis block to {}", fork_block);
+                    genesis.number = Some(fork_block);
+                }
+                node_args.init = Some(genesis);
             }
 
             Some(node_args.into_node_config())
@@ -61,14 +83,14 @@ impl Opt8n {
         let genesis = if let Some(genesis) = genesis.as_ref() {
             serde_json::from_reader(File::open(genesis)?)?
         } else {
-            None
+            Genesis::default()
         };
 
         let node_config = node_config
             .unwrap_or_default()
             .with_optimism(true)
             .with_no_mining(true)
-            .with_genesis(genesis);
+            .with_genesis(Some(genesis));
 
         let (eth_api, node_handle) = anvil::spawn(node_config.clone()).await;
         eth_api.anvil_set_logging(false).await?;
