@@ -4676,6 +4676,7 @@ dependencies = [
  "forge-script",
  "foundry-common",
  "futures",
+ "hyper 1.4.1",
  "op-alloy-rpc-types",
  "op-test-vectors",
  "revm 12.1.0",
