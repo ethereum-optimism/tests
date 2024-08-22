@@ -32,7 +32,7 @@ gen-multicall3 fork_url: install-opt8n forge-updates
 
 # Generates the execution test fixture for the SelfDestruct precompile script
 gen-self-destruct: install-opt8n forge-updates
-  RUST_LOG=info opt8n script --hardfork dao --output ../../fixtures/execution/SelfDestructPrecompile.json SelfDestructPrecompile
+  opt8n script --hardfork frontier --output ../../fixtures/execution/SelfDestructPrecompile.json SelfDestructPrecompile
 
 gen-self-destruct-regolith: install-opt8n forge-updates
   pt8n script --output ../../fixtures/execution/SelfDestructPrecompilePostRegolith.json SelfDestructPrecompile -- --hardfork canyon

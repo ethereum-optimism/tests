@@ -13,13 +13,9 @@ use std::{
     fs::{self, File},
     path::PathBuf,
 };
-use tracing::info;
 
 use color_eyre::eyre::{ensure, eyre, Result};
-use op_test_vectors::{
-    execution::{ExecutionFixture, ExecutionReceipt, ExecutionResult},
-    kona_derive::types::Genesis,
-};
+use op_test_vectors::execution::{ExecutionFixture, ExecutionReceipt, ExecutionResult};
 use revm::{
     db::{AlloyDB, CacheDB},
     primitives::{BlobExcessGasAndPrice, BlockEnv, CfgEnv, Env, SpecId, U256},
@@ -43,12 +39,7 @@ pub struct Opt8n {
 }
 
 impl Opt8n {
-    pub async fn new(
-        node_args: Option<NodeArgs>,
-        output_file: PathBuf,
-        // TODO: Remove the genesis argument
-        genesis: Option<PathBuf>,
-    ) -> Result<Self> {
+    pub async fn new(node_args: Option<NodeArgs>, output_file: PathBuf) -> Result<Self> {
         let node_config = if let Some(mut node_args) = node_args {
             if node_args.evm_opts.fork_url.is_some()
                 || node_args.evm_opts.fork_block_number.is_some()
@@ -80,17 +71,10 @@ impl Opt8n {
             None
         };
 
-        let genesis = if let Some(genesis) = genesis.as_ref() {
-            serde_json::from_reader(File::open(genesis)?)?
-        } else {
-            Genesis::default()
-        };
-
         let node_config = node_config
             .unwrap_or_default()
             .with_optimism(true)
-            .with_no_mining(true)
-            .with_genesis(Some(genesis));
+            .with_no_mining(true);
 
         let (eth_api, node_handle) = anvil::spawn(node_config.clone()).await;
         eth_api.anvil_set_logging(false).await?;

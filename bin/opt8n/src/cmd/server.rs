@@ -27,12 +27,8 @@ pub struct ServerArgs {
 
 impl ServerArgs {
     pub async fn run(&self) -> color_eyre::Result<()> {
-        let opt8n = Opt8n::new(
-            Some(self.node_args.clone()),
-            self.opt8n_args.output.clone(),
-            self.opt8n_args.genesis.clone(),
-        )
-        .await?;
+        let opt8n =
+            Opt8n::new(Some(self.node_args.clone()), self.opt8n_args.output.clone()).await?;
 
         let opt8n = Arc::new(Mutex::new(opt8n));
 
