@@ -201,6 +201,8 @@ impl Opt8n {
     }
 }
 
+// TODO: Consider adding `From` implementation for
+// `TypedTransaction` -> `OpTypedTransaction` in `op-alloy-consensus`
 fn typed_tx_to_op_typed_tx(tx: &TypedTransaction) -> OpTypedTransaction {
     let op_tx = match tx {
         TypedTransaction::Legacy(signed_tx) => OpTypedTransaction::Legacy(signed_tx.tx().clone()),
