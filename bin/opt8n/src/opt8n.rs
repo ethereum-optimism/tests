@@ -267,7 +267,9 @@ fn tx_receipt_to_op_tx_receipt(
         }
     };
 
-    let op_receipt = OpTransactionReceipt {
+    
+
+    OpTransactionReceipt {
         inner: TransactionReceipt {
             inner: op_receipt_envelope,
             transaction_hash: receipt.transaction_hash,
@@ -284,9 +286,7 @@ fn tx_receipt_to_op_tx_receipt(
             state_root: receipt.state_root,
             authorization_list: receipt.authorization_list,
         },
-    };
-
-    op_receipt
+    }
 }
 
 /// Creates a new EVM instance from a given block, chain, database, and spec id.

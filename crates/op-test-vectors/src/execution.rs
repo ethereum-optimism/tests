@@ -1,11 +1,10 @@
 //! Module containing the execution test fixture.
 
 use alloy_primitives::{Address, Bloom, B256, U256};
-use alloy_rpc_types::{trace::geth::AccountState, Block};
+use alloy_rpc_types::trace::geth::AccountState;
 
-use color_eyre::eyre::{self};
 use op_alloy_consensus::OpTypedTransaction;
-use op_alloy_rpc_types::{OpTransactionReceipt, Transaction};
+use op_alloy_rpc_types::OpTransactionReceipt;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -71,7 +70,6 @@ pub struct ExecutionResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy_rpc_types::Header;
     use serde_json::Value;
 
     #[test]
