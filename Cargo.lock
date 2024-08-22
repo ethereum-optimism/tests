@@ -4666,6 +4666,7 @@ name = "opt8n"
 version = "0.2.0"
 dependencies = [
  "alloy-eips",
+ "alloy-primitives",
  "alloy-rpc-types",
  "anvil",
  "anvil-core",

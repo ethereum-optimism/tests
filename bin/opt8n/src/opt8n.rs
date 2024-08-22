@@ -7,11 +7,13 @@ use alloy_rpc_types::{
     TransactionReceipt,
 };
 use anvil::{cmd::NodeArgs, eth::EthApi, NodeConfig, NodeHandle};
-use anvil_core::eth::transaction::PendingTransaction;
+use anvil_core::eth::transaction::{PendingTransaction, TypedTransaction};
 use anvil_core::eth::{block::Block, transaction::TypedReceipt};
 use cast::traces::{GethTraceBuilder, TracingInspectorConfig};
 use clap::Parser;
-use op_alloy_consensus::{OpDepositReceipt, OpDepositReceiptWithBloom, OpReceiptEnvelope};
+use op_alloy_consensus::{
+    OpDepositReceipt, OpDepositReceiptWithBloom, OpReceiptEnvelope, OpTypedTransaction, TxDeposit,
+};
 use op_alloy_rpc_types::OpTransactionReceipt;
 use std::{
     error::Error,
@@ -158,9 +160,9 @@ impl Opt8n {
                 let op_receipt = tx_receipt_to_op_tx_receipt(receipt);
                 receipts.push(op_receipt);
             }
-            self.execution_fixture
-                .transactions
-                .push(tx.transaction.into());
+
+            let op_tx = typed_tx_to_op_typed_tx(tx.transaction);
+            self.execution_fixture.transactions.push(op_tx);
         }
 
         let block_header = &block.header;
@@ -187,6 +189,40 @@ impl Opt8n {
 
         Ok(())
     }
+}
+
+fn typed_tx_to_op_typed_tx(tx: TypedTransaction) -> OpTypedTransaction {
+    let op_tx = match tx {
+        TypedTransaction::Legacy(signed_tx) => OpTypedTransaction::Legacy(signed_tx.tx().clone()),
+        TypedTransaction::EIP2930(signed_tx) => OpTypedTransaction::Eip2930(signed_tx.tx().clone()),
+
+        TypedTransaction::EIP1559(signed_tx) => OpTypedTransaction::Eip1559(signed_tx.tx().clone()),
+        TypedTransaction::EIP4844(signed_tx) => OpTypedTransaction::Eip4844(signed_tx.tx().clone()),
+        TypedTransaction::Deposit(deposit_tx) => {
+            let op_deposit_tx = TxDeposit {
+                source_hash: deposit_tx.source_hash,
+                from: deposit_tx.from,
+                to: deposit_tx.kind,
+                mint: Some(
+                    deposit_tx
+                        .mint
+                        .try_into()
+                        .expect("Mint is greater than u128"),
+                ),
+                value: deposit_tx.value,
+                gas_limit: deposit_tx.gas_limit,
+                is_system_transaction: deposit_tx.is_system_tx,
+                input: deposit_tx.input,
+            };
+
+            OpTypedTransaction::Deposit(op_deposit_tx)
+        }
+        TypedTransaction::EIP7702(_) => {
+            unimplemented!("EIP7702 not implemented")
+        }
+    };
+
+    op_tx
 }
 
 // TODO: Consider adding `From` implementation for

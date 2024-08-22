@@ -26,6 +26,7 @@ shellwords.workspace = true
 # Alloy
 alloy-eips.workspace = true
 alloy-rpc-types.workspace = true
+alloy-primitives.workspace = true
 
 # Foundry
 foundry-common.workspace = true

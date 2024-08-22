@@ -46,7 +46,9 @@ revm = { version = "12.1", features = ["alloydb", "optimism"] }
 
 # Kona + OP Types
 superchain-registry = "0.2.6"
-kona-derive = { git = "https://github.com/ethereum-optimism/kona", rev = "4e57dd35ea08b31d0baa293c7a12165f28e6cd92", features = ["online"] }
+kona-derive = { git = "https://github.com/ethereum-optimism/kona", rev = "4e57dd35ea08b31d0baa293c7a12165f28e6cd92", features = [
+    "online",
+] }
 
 # Internal
 op-test-vectors = { path = "crates/op-test-vectors" }

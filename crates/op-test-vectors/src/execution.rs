@@ -4,6 +4,7 @@ use alloy_primitives::{Address, Bloom, B256, U256};
 use alloy_rpc_types::{trace::geth::AccountState, Block};
 
 use color_eyre::eyre::{self};
+use op_alloy_consensus::OpTypedTransaction;
 use op_alloy_rpc_types::{OpTransactionReceipt, Transaction};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -23,7 +24,7 @@ pub struct ExecutionFixture {
     pub out_alloc: HashMap<Address, AccountState>,
     /// Transactions to execute.
     #[serde(rename = "txs")]
-    pub transactions: Vec<Transaction>,
+    pub transactions: Vec<OpTypedTransaction>,
     /// The expected result after executing transactions.
     pub result: ExecutionResult,
 }
