@@ -13,11 +13,11 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 )]
 #[serde(rename_all = "camelCase")]
 pub struct DerivationFixture<
-    RollupConfig: DeserializeOwned,
-    L2PayloadAttributes: DeserializeOwned,
-    SystemConfig: DeserializeOwned,
-    L2BlockInfo: DeserializeOwned,
-    Blob: DeserializeOwned,
+    RollupConfig: DeserializeOwned + Serialize,
+    L2PayloadAttributes: DeserializeOwned + Serialize,
+    SystemConfig: DeserializeOwned + Serialize,
+    L2BlockInfo: DeserializeOwned + Serialize,
+    Blob: DeserializeOwned + Serialize,
 > {
     /// The rollup config.
     pub rollup_config: RollupConfig,
@@ -46,7 +46,7 @@ pub struct DerivationFixture<
 #[derive(Serialize, Deserialize, Clone, Debug, Default, Eq, PartialEq)]
 #[serde(bound = "Blob: Serialize + DeserializeOwned")]
 #[serde(rename_all = "camelCase")]
-pub struct FixtureBlock<Blob: DeserializeOwned> {
+pub struct FixtureBlock<Blob: DeserializeOwned + Serialize> {
     /// The block header.
     /// The entire header is required to generate the block hash when deriving the l1 block info
     /// tx.
