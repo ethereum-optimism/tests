@@ -4586,7 +4586,6 @@ dependencies = [
  "alloy-consensus",
  "alloy-primitives",
  "alloy-rpc-types",
- "anvil-core",
  "color-eyre",
  "hashbrown",
  "kona-derive",
