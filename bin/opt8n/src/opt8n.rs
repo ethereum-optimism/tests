@@ -22,7 +22,7 @@ use std::{
 };
 
 use color_eyre::eyre::{ensure, eyre, Result};
-use op_test_vectors::execution::{ExecutionFixture, ExecutionResult};
+use op_test_vectors::execution::{ExecutionEnvironment, ExecutionFixture, ExecutionResult};
 use revm::{
     db::{AlloyDB, CacheDB},
     primitives::{BlobExcessGasAndPrice, BlockEnv, CfgEnv, Env, SpecId, U256},
@@ -151,7 +151,7 @@ impl Opt8n {
         // Append block transactions and receipts to the execution fixture
         let mut receipts: Vec<OpTransactionReceipt> = Vec::with_capacity(block.transactions.len());
         for tx in block.transactions.iter() {
-            if let Some(mut receipt) = self
+            if let Some(receipt) = self
                 .eth_api
                 .backend
                 .transaction_receipt(tx.transaction.hash())
@@ -161,7 +161,7 @@ impl Opt8n {
                 receipts.push(op_receipt);
             }
 
-            let op_tx = typed_tx_to_op_typed_tx(tx.transaction);
+            let op_tx = typed_tx_to_op_typed_tx(&tx.transaction);
             self.execution_fixture.transactions.push(op_tx);
         }
 
@@ -174,7 +174,17 @@ impl Opt8n {
             receipts,
         };
 
-        self.execution_fixture.env = block.try_into()?;
+        let execution_environment = ExecutionEnvironment {
+            current_coinbase: block_header.beneficiary,
+            current_difficulty: block_header.difficulty,
+            current_gas_limit: U256::from(block.header.gas_limit),
+            previous_hash: block_header.parent_hash,
+            current_number: U256::from(block.header.number),
+            current_timestamp: U256::from(block_header.timestamp),
+            block_hashes: None,
+        };
+
+        self.execution_fixture.env = execution_environment;
         self.execution_fixture.result = execution_result;
 
         // Ensure pre and post states are different
@@ -191,7 +201,7 @@ impl Opt8n {
     }
 }
 
-fn typed_tx_to_op_typed_tx(tx: TypedTransaction) -> OpTypedTransaction {
+fn typed_tx_to_op_typed_tx(tx: &TypedTransaction) -> OpTypedTransaction {
     let op_tx = match tx {
         TypedTransaction::Legacy(signed_tx) => OpTypedTransaction::Legacy(signed_tx.tx().clone()),
         TypedTransaction::EIP2930(signed_tx) => OpTypedTransaction::Eip2930(signed_tx.tx().clone()),
@@ -212,7 +222,7 @@ fn typed_tx_to_op_typed_tx(tx: TypedTransaction) -> OpTypedTransaction {
                 value: deposit_tx.value,
                 gas_limit: deposit_tx.gas_limit,
                 is_system_transaction: deposit_tx.is_system_tx,
-                input: deposit_tx.input,
+                input: deposit_tx.input.clone(),
             };
 
             OpTypedTransaction::Deposit(op_deposit_tx)

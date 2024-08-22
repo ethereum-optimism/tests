@@ -51,27 +51,6 @@ pub struct ExecutionEnvironment {
     pub block_hashes: Option<HashMap<U256, B256>>,
 }
 
-impl TryFrom<Block> for ExecutionEnvironment {
-    type Error = eyre::Error;
-
-    fn try_from(block: Block) -> Result<Self, Self::Error> {
-        let block_number = block
-            .header
-            .number
-            .ok_or_else(|| eyre::eyre!("missing block number"))?;
-
-        Ok(Self {
-            current_coinbase: block.header.miner,
-            current_difficulty: block.header.difficulty,
-            current_gas_limit: U256::from(block.header.gas_limit),
-            previous_hash: block.header.parent_hash,
-            current_number: U256::from(block_number),
-            current_timestamp: U256::from(block.header.timestamp),
-            block_hashes: None,
-        })
-    }
-}
-
 /// The execution result is the expected result after running the transactions
 /// in the execution environment over the pre-state.
 #[derive(Serialize, Deserialize, Debug, Default)]
@@ -120,19 +99,5 @@ mod tests {
         let expected_value = serde_json::from_str::<Value>(expected_result)
             .expect("failed to parse expected result");
         assert_eq!(serialized_value, expected_value);
-    }
-
-    #[test]
-    fn test_execution_environment_try_from_missing_block() {
-        let block = Block {
-            header: Header {
-                number: None,
-                ..Default::default()
-            },
-            ..Default::default()
-        };
-
-        let execution_environment = ExecutionEnvironment::try_from(block);
-        assert!(execution_environment.is_err());
     }
 }
