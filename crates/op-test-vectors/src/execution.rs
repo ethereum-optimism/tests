@@ -1,11 +1,10 @@
 //! Module containing the execution test fixture.
 
 use alloy_primitives::{Address, Bloom, B256, U256};
-use alloy_rpc_types::trace::geth::AccountState;
-use alloy_rpc_types::{Log, TransactionReceipt};
-use anvil_core::eth::block::Block;
-use anvil_core::eth::transaction::{TypedReceipt, TypedTransaction};
-use color_eyre::eyre;
+use alloy_rpc_types::{trace::geth::AccountState, Block};
+
+use color_eyre::eyre::{self};
+use op_alloy_rpc_types::{OpTransactionReceipt, Transaction};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -24,7 +23,7 @@ pub struct ExecutionFixture {
     pub out_alloc: HashMap<Address, AccountState>,
     /// Transactions to execute.
     #[serde(rename = "txs")]
-    pub transactions: Vec<TypedTransaction>,
+    pub transactions: Vec<Transaction>,
     /// The expected result after executing transactions.
     pub result: ExecutionResult,
 }
@@ -51,17 +50,24 @@ pub struct ExecutionEnvironment {
     pub block_hashes: Option<HashMap<U256, B256>>,
 }
 
-impl From<Block> for ExecutionEnvironment {
-    fn from(block: Block) -> Self {
-        Self {
-            current_coinbase: block.header.beneficiary,
+impl TryFrom<Block> for ExecutionEnvironment {
+    type Error = eyre::Error;
+
+    fn try_from(block: Block) -> Result<Self, Self::Error> {
+        let block_number = block
+            .header
+            .number
+            .ok_or_else(|| eyre::eyre!("missing block number"))?;
+
+        Ok(Self {
+            current_coinbase: block.header.miner,
             current_difficulty: block.header.difficulty,
             current_gas_limit: U256::from(block.header.gas_limit),
             previous_hash: block.header.parent_hash,
-            current_number: U256::from(block.header.number),
+            current_number: U256::from(block_number),
             current_timestamp: U256::from(block.header.timestamp),
             block_hashes: None,
-        }
+        })
     }
 }
 
@@ -79,58 +85,13 @@ pub struct ExecutionResult {
     /// The logs bloom.
     pub logs_bloom: Bloom,
     /// A list of execution receipts for each executed transaction.
-    pub receipts: Vec<ExecutionReceipt>,
-}
-
-/// An execution receipt is the result of running a transaction in the execution environment.
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct ExecutionReceipt {
-    /// The state root.
-    pub root: B256,
-    /// The hash of the transaction.
-    pub transaction_hash: B256,
-    /// The contract address that the transaction created.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub contract_address: Option<Address>,
-    /// The gas used by the transaction.
-    pub gas_used: U256,
-    /// The block hash.
-    pub block_hash: B256,
-    /// The transaction index.
-    pub transaction_index: U256,
-    /// The inner log receipt.
-    #[serde(flatten)]
-    pub inner: TypedReceipt<Log>,
-}
-
-impl TryFrom<TransactionReceipt<TypedReceipt<Log>>> for ExecutionReceipt {
-    type Error = eyre::Error;
-
-    fn try_from(receipt: TransactionReceipt<TypedReceipt<Log>>) -> eyre::Result<Self> {
-        Ok(Self {
-            transaction_hash: receipt.transaction_hash,
-            root: receipt
-                .state_root
-                .ok_or_else(|| eyre::eyre!("missing state root"))?,
-            contract_address: receipt.contract_address,
-            gas_used: U256::from(receipt.gas_used),
-            block_hash: receipt
-                .block_hash
-                .ok_or_else(|| eyre::eyre!("missing block hash"))?,
-            transaction_index: U256::from(
-                receipt
-                    .transaction_index
-                    .ok_or_else(|| eyre::eyre!("missing transaction index"))?,
-            ),
-            inner: receipt.inner,
-        })
-    }
+    pub receipts: Vec<OpTransactionReceipt>,
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloy_rpc_types::Header;
     use serde_json::Value;
 
     #[test]
@@ -161,51 +122,16 @@ mod tests {
     }
 
     #[test]
-    fn test_exec_receipt_try_from_tx_receipt() {
-        let tx_receipt_str = include_str!("./testdata/tx_receipt.json");
-        let tx_receipt: TransactionReceipt<TypedReceipt<Log>> =
-            serde_json::from_str(tx_receipt_str).expect("failed to parse tx receipt");
-        let exec_receipt = ExecutionReceipt::try_from(tx_receipt.clone())
-            .expect("failed to convert tx receipt to exec receipt");
-        assert_eq!(exec_receipt.transaction_hash, tx_receipt.transaction_hash);
-        assert_eq!(exec_receipt.root, tx_receipt.state_root.unwrap());
-        assert_eq!(exec_receipt.contract_address, tx_receipt.contract_address);
-        assert_eq!(exec_receipt.gas_used, U256::from(tx_receipt.gas_used));
-        assert_eq!(exec_receipt.block_hash, tx_receipt.block_hash.unwrap());
-        assert_eq!(
-            exec_receipt.transaction_index,
-            U256::from(tx_receipt.transaction_index.unwrap())
-        );
-        assert_eq!(exec_receipt.inner, tx_receipt.inner);
-    }
+    fn test_execution_environment_try_from_missing_block() {
+        let block = Block {
+            header: Header {
+                number: None,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
 
-    #[test]
-    fn test_exec_receipt_try_from_missing_root() {
-        let tx_receipt_str = include_str!("./testdata/tx_receipt.json");
-        let mut tx_receipt: TransactionReceipt<TypedReceipt<Log>> =
-            serde_json::from_str(tx_receipt_str).expect("failed to parse tx receipt");
-        tx_receipt.state_root = None;
-        let exec_receipt = ExecutionReceipt::try_from(tx_receipt);
-        assert!(exec_receipt.is_err());
-    }
-
-    #[test]
-    fn test_exec_receipt_try_from_missing_block_hash() {
-        let tx_receipt_str = include_str!("./testdata/tx_receipt.json");
-        let mut tx_receipt: TransactionReceipt<TypedReceipt<Log>> =
-            serde_json::from_str(tx_receipt_str).expect("failed to parse tx receipt");
-        tx_receipt.block_hash = None;
-        let exec_receipt = ExecutionReceipt::try_from(tx_receipt);
-        assert!(exec_receipt.is_err());
-    }
-
-    #[test]
-    fn test_exec_receipt_try_from_missing_tx_index() {
-        let tx_receipt_str = include_str!("./testdata/tx_receipt.json");
-        let mut tx_receipt: TransactionReceipt<TypedReceipt<Log>> =
-            serde_json::from_str(tx_receipt_str).expect("failed to parse tx receipt");
-        tx_receipt.transaction_index = None;
-        let exec_receipt = ExecutionReceipt::try_from(tx_receipt);
-        assert!(exec_receipt.is_err());
+        let execution_environment = ExecutionEnvironment::try_from(block);
+        assert!(execution_environment.is_err());
     }
 }
