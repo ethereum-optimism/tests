@@ -4678,6 +4678,7 @@ dependencies = [
  "futures",
  "http-body-util",
  "hyper 1.4.1",
+ "op-alloy-consensus",
  "op-alloy-rpc-types",
  "op-test-vectors",
  "reqwest",

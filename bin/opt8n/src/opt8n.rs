@@ -2,12 +2,17 @@
 
 use alloy_eips::eip2718::Encodable2718;
 use alloy_eips::BlockId;
-use alloy_rpc_types::trace::geth::{PreStateConfig, PreStateFrame};
+use alloy_rpc_types::{
+    trace::geth::{PreStateConfig, PreStateFrame},
+    TransactionReceipt,
+};
 use anvil::{cmd::NodeArgs, eth::EthApi, NodeConfig, NodeHandle};
-use anvil_core::eth::block::Block;
 use anvil_core::eth::transaction::PendingTransaction;
+use anvil_core::eth::{block::Block, transaction::TypedReceipt};
 use cast::traces::{GethTraceBuilder, TracingInspectorConfig};
 use clap::Parser;
+use op_alloy_consensus::{OpDepositReceipt, OpDepositReceiptWithBloom, OpReceiptEnvelope};
+use op_alloy_rpc_types::OpTransactionReceipt;
 use std::{
     error::Error,
     fs::{self, File},
@@ -15,7 +20,7 @@ use std::{
 };
 
 use color_eyre::eyre::{ensure, eyre, Result};
-use op_test_vectors::execution::{ExecutionFixture, ExecutionReceipt, ExecutionResult};
+use op_test_vectors::execution::{ExecutionFixture, ExecutionResult};
 use revm::{
     db::{AlloyDB, CacheDB},
     primitives::{BlobExcessGasAndPrice, BlockEnv, CfgEnv, Env, SpecId, U256},
@@ -142,19 +147,20 @@ impl Opt8n {
         self.capture_pre_post_alloc(&block)?;
 
         // Append block transactions and receipts to the execution fixture
-        let mut receipts: Vec<ExecutionReceipt> = Vec::with_capacity(block.transactions.len());
+        let mut receipts: Vec<OpTransactionReceipt> = Vec::with_capacity(block.transactions.len());
         for tx in block.transactions.iter() {
-            if let Some(receipt) = self
+            if let Some(mut receipt) = self
                 .eth_api
                 .backend
                 .transaction_receipt(tx.transaction.hash())
                 .await?
             {
-                receipts.push(receipt.try_into()?);
+                let op_receipt = tx_receipt_to_op_tx_receipt(receipt);
+                receipts.push(op_receipt);
             }
             self.execution_fixture
                 .transactions
-                .push(tx.transaction.clone());
+                .push(tx.transaction.into());
         }
 
         let block_header = &block.header;
@@ -166,7 +172,7 @@ impl Opt8n {
             receipts,
         };
 
-        self.execution_fixture.env = block.into();
+        self.execution_fixture.env = block.try_into()?;
         self.execution_fixture.result = execution_result;
 
         // Ensure pre and post states are different
@@ -181,6 +187,58 @@ impl Opt8n {
 
         Ok(())
     }
+}
+
+// TODO: Consider adding `From` implementation for
+// `TransactionReceipt` -> `OpTransactionReceipt` in `op-alloy-consensus`
+fn tx_receipt_to_op_tx_receipt(
+    receipt: TransactionReceipt<TypedReceipt<alloy_rpc_types::Log>>,
+) -> OpTransactionReceipt {
+    let receipt_envelope = receipt.inner;
+    let op_receipt_envelope = match receipt_envelope {
+        TypedReceipt::Legacy(receipt_with_bloom) => OpReceiptEnvelope::Legacy(receipt_with_bloom),
+        TypedReceipt::EIP2930(receipt_with_bloom) => OpReceiptEnvelope::Eip2930(receipt_with_bloom),
+        TypedReceipt::EIP1559(receipt_with_bloom) => OpReceiptEnvelope::Eip1559(receipt_with_bloom),
+        TypedReceipt::EIP4844(receipt_with_bloom) => OpReceiptEnvelope::Eip4844(receipt_with_bloom),
+        TypedReceipt::EIP7702(_) => {
+            unimplemented!("EIP7702 not implemented")
+        }
+        TypedReceipt::Deposit(deposit_receipt) => {
+            let op_deposit_receipt = OpDepositReceipt {
+                inner: deposit_receipt.inner.receipt,
+                deposit_nonce: deposit_receipt.deposit_nonce,
+                deposit_receipt_version: deposit_receipt.deposit_receipt_version,
+            };
+
+            let op_deposit_receipt_with_bloom = OpDepositReceiptWithBloom {
+                receipt: op_deposit_receipt,
+                logs_bloom: deposit_receipt.inner.logs_bloom,
+            };
+
+            OpReceiptEnvelope::Deposit(op_deposit_receipt_with_bloom)
+        }
+    };
+
+    let op_receipt = OpTransactionReceipt {
+        inner: TransactionReceipt {
+            inner: op_receipt_envelope,
+            transaction_hash: receipt.transaction_hash,
+            transaction_index: receipt.transaction_index,
+            block_hash: receipt.block_hash,
+            block_number: receipt.block_number,
+            gas_used: receipt.gas_used,
+            effective_gas_price: receipt.effective_gas_price,
+            blob_gas_used: receipt.blob_gas_used,
+            blob_gas_price: receipt.blob_gas_price,
+            from: receipt.from,
+            to: receipt.to,
+            contract_address: receipt.contract_address,
+            state_root: receipt.state_root,
+            authorization_list: receipt.authorization_list,
+        },
+    };
+
+    op_receipt
 }
 
 /// Creates a new EVM instance from a given block, chain, database, and spec id.
