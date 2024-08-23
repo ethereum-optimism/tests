@@ -38,13 +38,31 @@ Each has it's own cli tool to generate test fixtures. [opt8n](./bin/opt8n) can b
 
 **`op-test-vectors`**
 
+A rust crate exposing types used to generate test fixtures in [./fixtures](./fixtures/).
+
+`op-test-vectors` contains two primary modules:
+
 - [`execution`](./crates/op-test-vectors/src/execution.rs): Rust types for the execution test fixtures.
 - [`derivation`](./crates/op-test-vectors/src/derivation.rs): Rust types for the derivation test fixtures.
 
-**`opt8n` Commands**
+**`opt8n`**
+
+A binary to generate execution test fixtures.
+
+`opt8n` has two subcommands:
 
 - `repl`: Spins up a REPL that allows the user to send transactions to and generate a test fixture from those transactions.
 - `script`: Executes a forge script against an anvil instance and generates the test fixture.
+
+**`opdn`**
+
+A binary to generate derivation test fixtures.
+
+`opdn` has the following subcommands:
+
+- `from-l2`: Generates a derivation test fixture from the specified range of L2 blocks.
+- `from-l1`: Generates a derivation test fixture from the specified range of L1 blocks.
+- `info`: Outputs the L2 block info including the L1 origin for the given L2 block number.
 
 ## Book
 
