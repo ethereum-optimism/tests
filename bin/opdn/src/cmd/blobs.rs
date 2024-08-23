@@ -9,7 +9,7 @@ use kona_derive::online::{
     OnlineBeaconClient, OnlineBlobProviderWithFallback, SimpleSlotDerivation,
 };
 use kona_derive::traits::BlobProvider;
-use kona_derive::types::{Blob, BlockInfo, IndexedBlobHash};
+use kona_primitives::{Blob, BlockInfo, IndexedBlobHash};
 
 /// Loads blobs for the given block number.
 pub async fn load(

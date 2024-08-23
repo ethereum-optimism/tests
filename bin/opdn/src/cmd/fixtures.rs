@@ -8,6 +8,7 @@ use kona_derive::online::{
     AlloyChainProvider, OnlineBeaconClient, OnlineBlobProviderWithFallback, SimpleSlotDerivation,
 };
 use kona_derive::traits::ChainProvider;
+use kona_primitives::Blob;
 use op_test_vectors::derivation::FixtureBlock;
 
 /// Constructs [FixtureBlock]s for the given L1 blocks.
@@ -21,7 +22,7 @@ pub async fn build_fixture_blocks(
         OnlineBeaconClient,
         SimpleSlotDerivation,
     >,
-) -> Result<Vec<FixtureBlock>> {
+) -> Result<Vec<FixtureBlock<Blob>>> {
     let mut fixtures = Vec::with_capacity(blocks.len());
     for b in blocks {
         let block_info = l1_provider

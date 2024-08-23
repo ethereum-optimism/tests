@@ -3,18 +3,26 @@
 use alloy_consensus::{Header, Receipt};
 use alloy_primitives::Bytes;
 use hashbrown::HashMap;
-use kona_derive::types::{Blob, L2BlockInfo, L2PayloadAttributes, RollupConfig, SystemConfig};
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 /// The derivation fixture is the top-level object that contains
 /// everything needed to run a derivation test.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, Eq, PartialEq)]
+#[serde(
+    bound = "RollupConfig: Serialize + DeserializeOwned, L2PayloadAttributes: Serialize + DeserializeOwned, SystemConfig: Serialize + DeserializeOwned, L2BlockInfo: Serialize + DeserializeOwned, Blob: Serialize + DeserializeOwned"
+)]
 #[serde(rename_all = "camelCase")]
-pub struct DerivationFixture {
+pub struct DerivationFixture<
+    RollupConfig: DeserializeOwned + Serialize,
+    L2PayloadAttributes: DeserializeOwned + Serialize,
+    SystemConfig: DeserializeOwned + Serialize,
+    L2BlockInfo: DeserializeOwned + Serialize,
+    Blob: DeserializeOwned + Serialize,
+> {
     /// The rollup config.
     pub rollup_config: RollupConfig,
     /// A list of L1 Blocks to derive from.
-    pub l1_blocks: Vec<FixtureBlock>,
+    pub l1_blocks: Vec<FixtureBlock<Blob>>,
     /// A map of L2 block number to l2 payload attributes.
     pub l2_payloads: HashMap<u64, L2PayloadAttributes>,
     /// A map of l2 block number to reference payloads.
@@ -36,8 +44,9 @@ pub struct DerivationFixture {
 /// A fixture block is a minimal block with associated data including blobs
 /// to derive from.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, Eq, PartialEq)]
+#[serde(bound = "Blob: Serialize + DeserializeOwned")]
 #[serde(rename_all = "camelCase")]
-pub struct FixtureBlock {
+pub struct FixtureBlock<Blob: DeserializeOwned + Serialize> {
     /// The block header.
     /// The entire header is required to generate the block hash when deriving the l1 block info
     /// tx.
@@ -55,9 +64,11 @@ pub struct FixtureBlock {
 mod tests {
     use super::*;
     use alloy_primitives::{address, b256, bytes, uint};
-    use kona_derive::types::{BlockID, BlockInfo};
+    use kona_primitives::{
+        Blob, BlockID, BlockInfo, L2BlockInfo, L2PayloadAttributes, RollupConfig, SystemConfig,
+    };
 
-    fn ref_blocks() -> Vec<FixtureBlock> {
+    fn ref_blocks() -> Vec<FixtureBlock<Blob>> {
         vec![
             FixtureBlock {
                 header: Header {
@@ -336,7 +347,13 @@ mod tests {
     #[test]
     fn test_derivation_fixture() {
         let fixture_str = include_str!("./testdata/derivation_fixture.json");
-        let fixture: DerivationFixture = serde_json::from_str(fixture_str).unwrap();
+        let fixture: DerivationFixture<
+            RollupConfig,
+            L2PayloadAttributes,
+            SystemConfig,
+            L2BlockInfo,
+            Blob,
+        > = serde_json::from_str(fixture_str).unwrap();
         let expected = DerivationFixture {
             rollup_config: ref_rollup_config(),
             l1_blocks: ref_blocks(),
@@ -353,7 +370,7 @@ mod tests {
     #[test]
     fn test_fixture_block() {
         let fixture_str = include_str!("./testdata/fixture_block.json");
-        let fixture: FixtureBlock = serde_json::from_str(fixture_str).unwrap();
+        let fixture: FixtureBlock<Blob> = serde_json::from_str(fixture_str).unwrap();
         assert_eq!(fixture.header.number, 1);
         assert_eq!(
             fixture.header.parent_hash,
