@@ -1,6 +1,6 @@
 //! Utilities
 
-use kona_derive::types::{L2ExecutionPayloadEnvelope, L2PayloadAttributes, RawTransaction};
+use kona_primitives::{L2ExecutionPayloadEnvelope, L2PayloadAttributes, RawTransaction};
 
 /// Converts an [L2ExecutionPayloadEnvelope] to an [L2PayloadAttributes].
 pub fn to_payload_attributes(payload: L2ExecutionPayloadEnvelope) -> L2PayloadAttributes {

@@ -8,7 +8,7 @@ use kona_derive::online::{
     AlloyChainProvider, OnlineBeaconClient, OnlineBlobProviderWithFallback, SimpleSlotDerivation,
 };
 use kona_derive::traits::ChainProvider;
-use kona_derive::types::Blob;
+use kona_primitives::Blob;
 use op_test_vectors::derivation::FixtureBlock;
 
 /// Constructs [FixtureBlock]s for the given L1 blocks.

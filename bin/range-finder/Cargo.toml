@@ -27,4 +27,5 @@ alloy-eips.workspace = true
 
 # OP Types + Kona
 kona-derive.workspace = true
+kona-primitives.workspace = true
 superchain-registry.workspace = true

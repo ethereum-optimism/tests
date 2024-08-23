@@ -6,10 +6,8 @@ use color_eyre::{
     Result,
 };
 use hashbrown::HashMap;
-use kona_derive::{
-    online::*,
-    types::{L2BlockInfo, StageError},
-};
+use kona_derive::{errors::StageError, online::*};
+use kona_primitives::L2BlockInfo;
 use op_test_vectors::derivation::DerivationFixture;
 use reqwest::Url;
 use std::path::PathBuf;
