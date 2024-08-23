@@ -30,5 +30,6 @@ alloy-eips.workspace = true
 
 # OP Types + Kona
 op-test-vectors.workspace = true
+kona-primitives.workspace = true
 kona-derive.workspace = true
 superchain-registry.workspace = true

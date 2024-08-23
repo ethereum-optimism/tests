@@ -2,10 +2,8 @@
 
 use clap::{ArgAction, Parser};
 use color_eyre::eyre::{eyre, Result};
-use kona_derive::{
-    online::*,
-    types::{L2BlockInfo, StageError},
-};
+use kona_derive::{errors::StageError, online::*};
+use kona_primitives::L2BlockInfo;
 use reqwest::Url;
 use std::sync::Arc;
 use superchain_registry::ROLLUP_CONFIGS;

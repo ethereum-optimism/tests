@@ -29,4 +29,4 @@ op-alloy-consensus.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true
-kona-derive.workspace = true
+kona-primitives.workspace = true

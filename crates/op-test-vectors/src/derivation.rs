@@ -64,7 +64,7 @@ pub struct FixtureBlock<Blob: DeserializeOwned + Serialize> {
 mod tests {
     use super::*;
     use alloy_primitives::{address, b256, bytes, uint};
-    use kona_derive::types::{
+    use kona_primitives::{
         Blob, BlockID, BlockInfo, L2BlockInfo, L2PayloadAttributes, RollupConfig, SystemConfig,
     };
 
