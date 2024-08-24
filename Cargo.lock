@@ -4588,7 +4588,6 @@ dependencies = [
  "alloy-consensus",
  "alloy-primitives",
  "alloy-rpc-types",
- "anvil-core",
  "color-eyre",
  "hashbrown",
  "kona-primitives",
@@ -4670,6 +4669,7 @@ name = "opt8n"
 version = "0.2.0"
 dependencies = [
  "alloy-eips",
+ "alloy-primitives",
  "alloy-rpc-types",
  "anvil",
  "anvil-core",
@@ -4682,6 +4682,7 @@ dependencies = [
  "futures",
  "http-body-util",
  "hyper 1.4.1",
+ "op-alloy-consensus",
  "op-alloy-rpc-types",
  "op-test-vectors",
  "reqwest",
