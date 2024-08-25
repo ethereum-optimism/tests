@@ -4,7 +4,7 @@ use super::{deposits::DepositCapture, state::StateCapture, Cli};
 use crate::generator::STF;
 use alloy_genesis::Genesis;
 use alloy_primitives::Bytes;
-use color_eyre::{eyre::ensure, Result, owo_colors::OwoColorize};
+use color_eyre::{eyre::ensure, owo_colors::OwoColorize, Result};
 use futures::{future::BoxFuture, FutureExt};
 use inquire::Select;
 use std::{fmt::Display, path::PathBuf};
@@ -44,7 +44,7 @@ impl<'a> T8n<'a> {
             let options = [
                 MainMenuOption::SetupEnvironment,
                 MainMenuOption::CaptureDeposits,
-                MainMenuOption::ModifyBlock,
+                MainMenuOption::CaptureTransactions,
                 MainMenuOption::GenerateFixture,
                 MainMenuOption::Exit,
             ];
@@ -53,7 +53,7 @@ impl<'a> T8n<'a> {
             match choice {
                 MainMenuOption::SetupEnvironment => {
                     // Capture prestate and test block environment.
-                    let (_, l1_info_encoded) = self.state_cfg.capture_state().await?;
+                    let l1_info_encoded = self.state_cfg.capture_state().await?;
                     self.deposits.transactions.push(l1_info_encoded);
 
                     // Return to the main menu.
@@ -66,7 +66,7 @@ impl<'a> T8n<'a> {
                     // Return to the main menu.
                     self.run().await?;
                 }
-                MainMenuOption::ModifyBlock => {
+                MainMenuOption::CaptureTransactions => {
                     // Capture the transactions sent to the L2 node.
                     let transactions = crate::proxy::capture_transactions(
                         3000,
@@ -129,7 +129,7 @@ impl<'a> T8n<'a> {
 enum MainMenuOption {
     SetupEnvironment,
     CaptureDeposits,
-    ModifyBlock,
+    CaptureTransactions,
     GenerateFixture,
     Exit,
 }
@@ -142,7 +142,7 @@ impl Display for MainMenuOption {
                 "Setup environment (capture prestate and test block environment)"
             ),
             Self::CaptureDeposits => write!(f, "Set deposit transactions"),
-            Self::ModifyBlock => write!(f, "Set user-space transactions"),
+            Self::CaptureTransactions => write!(f, "Set user-space transactions"),
             Self::GenerateFixture => write!(f, "Generate execution fixture"),
             Self::Exit => write!(f, "Exit"),
         }

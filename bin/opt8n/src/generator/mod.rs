@@ -1,11 +1,12 @@
 //! The reference state transition function.
 
+use crate::cli::state::{DumpBlockResponse, GenesisAccountExt};
 use alloy_consensus::{constants::KECCAK_EMPTY, Header};
 use alloy_genesis::{Genesis, GenesisAccount};
 use alloy_primitives::B256;
 use alloy_rlp::{Decodable, Encodable};
 use alloy_trie::{HashBuilder, HashMap, Nibbles};
-use color_eyre::{eyre::eyre, Result};
+use color_eyre::{eyre::eyre, owo_colors::OwoColorize, Result};
 use itertools::Itertools;
 use kona_mpt::TrieAccount;
 use op_test_vectors::execution::{ExecutionEnvironment, ExecutionFixture, ExecutionResult};
@@ -22,8 +23,7 @@ use revm::{
     primitives::{AccountInfo, Bytecode},
 };
 use std::{collections::BTreeMap, sync::Arc};
-
-use crate::cli::state::{DumpBlockResponse, GenesisAccountExt};
+use tracing::info;
 
 /// The database for [STF].
 type STFDB = CacheDB<EmptyDBTyped<ProviderError>>;
@@ -159,12 +159,14 @@ impl STF {
             .collect::<Result<Vec<_>>>()?;
 
         // Execute the block.
+        info!(target: "stf", "Executing block with {} transactions...", txs.len().cyan());
         let block_with_senders = BlockWithSenders::new(block, senders)
             .ok_or(eyre!("Error creating block with senders"))?;
         let execution_input = BlockExecutionInput::new(&block_with_senders, header.difficulty);
         let BlockExecutionOutput {
             state, receipts, ..
         } = executor.execute(execution_input)?;
+        info!(target: "stf", "✅ Block successfully executed.");
 
         // Flush the bundle state updates to the in-memory database.
         let alloc_db = self.db.clone();
@@ -206,6 +208,13 @@ impl STF {
             .block_logs_bloom(header.number)
             .expect("Number is in range");
         let transactions_root = reth_primitives::proofs::calculate_transaction_root(&txs);
+
+        // Log the execution fixture results.
+        let ind = "~>".magenta().italic().to_string();
+        info!(target: "stf", "{} State root: {}", ind, root.cyan());
+        info!(target: "stf", "{} Transactions root: {}", ind, transactions_root.cyan());
+        info!(target: "stf", "{} Receipts root: {}", ind, receipts_root.cyan());
+        info!(target: "stf", "{} Logs bloom: {}", ind, logs_bloom.cyan());
 
         Ok(ExecutionFixture {
             env: ExecutionEnvironment {

@@ -10,7 +10,6 @@ use alloy_provider::{
 };
 use color_eyre::eyre::{bail, eyre, Result};
 use hashbrown::HashMap;
-use kona_primitives::L1BlockInfoTx;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use tracing::info;
@@ -44,7 +43,7 @@ impl<'a> StateCapture<'a> {
     /// ## Returns
     /// - `Ok(L1BlockInfoTx)` - Successfully captured the prestate / test block environment.
     /// - `Err(_)` - Error capturing prestate / test block environment.
-    pub(crate) async fn capture_state(&mut self) -> Result<(L1BlockInfoTx, Bytes)> {
+    pub(crate) async fn capture_state(&mut self) -> Result<Bytes> {
         // Set up the providers.
         let l2_rpc_url = format!("http://localhost:{}", self.cli.l2_port);
         let l2_provider: RootProvider<_, Ethereum> =
@@ -78,7 +77,7 @@ impl<'a> StateCapture<'a> {
 
         // Fetch the latest and parent block.
         let latest_block = l2_provider
-            .get_block_by_number(latest_block_number.into(), true)
+            .get_block_by_number(latest_block_number.into(), false)
             .await?
             .ok_or(eyre!("Latest block not found."))?;
         let parent_block = l2_provider
@@ -89,23 +88,20 @@ impl<'a> StateCapture<'a> {
         self.header = latest_block.header.try_into()?;
         self.pre_header = parent_block.header.try_into()?;
 
-        let BlockTransactions::Full(transactions) = latest_block.transactions else {
+        let BlockTransactions::Hashes(transactions) = latest_block.transactions else {
             bail!("Could not fetch L1 info transaction.")
         };
 
         let l1_info_tx = transactions
             .get(0)
             .ok_or(eyre!("L1 info transaction not present"))?;
-        let l1_info = L1BlockInfoTx::decode_calldata(l1_info_tx.input.as_ref())
-            .map_err(|e| eyre!("Error decoding L1 info tx: {e}"))?;
-
         let raw_tx = l2_provider
-            .raw_request::<[B256; 1], Bytes>("debug_getRawTransaction".into(), [l1_info_tx.hash])
+            .raw_request::<[B256; 1], Bytes>("debug_getRawTransaction".into(), [*l1_info_tx])
             .await?;
 
         info!(target: "state-capture", "Captured prestate / test block environment successfully.");
 
-        Ok((l1_info, raw_tx))
+        Ok(raw_tx)
     }
 }
 
