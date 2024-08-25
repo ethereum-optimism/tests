@@ -10,36 +10,44 @@ publish = false
 
 [dependencies]
 # Core
+hashbrown.workspace = true
 serde.workspace = true
-serde_json.workspace = true
 tracing.workspace = true
+serde_json.workspace = true
 tokio.workspace = true
+reqwest.workspace = true
 futures.workspace = true
 color-eyre.workspace = true
-axum = "0.7.5"
-http-body-util = "0.1.2"
+tracing-subscriber.workspace = true
 
 # CLI
 clap.workspace = true
-shellwords.workspace = true
+inquire = { version = "0.7.5", features = ["editor"] }
+axum = "0.7"
+ctrlc = "3.4"
 
 # Alloy
-alloy-eips.workspace = true
-alloy-rpc-types.workspace = true
 alloy-primitives.workspace = true
-
-# Foundry
-foundry-common.workspace = true
-anvil.workspace = true
-anvil-core.workspace = true
-cast.workspace = true
-forge-script.workspace = true
-revm.workspace = true
-
-# OP Types
-op-test-vectors.workspace = true
-op-alloy-rpc-types.workspace = true
+alloy-rlp.workspace = true
+alloy-consensus.workspace = true
+alloy-eips.workspace = true
+alloy-transport = "0.2"
+alloy-provider = "0.2"
+alloy-transport-http = "0.2"
 op-alloy-consensus.workspace = true
-thiserror.workspace = true
-reqwest.workspace = true
-hyper = "1.4.1"
+op-alloy-network.workspace = true
+
+# OP Types + Kona
+op-test-vectors.workspace = true
+kona-primitives.workspace = true
+kona-mpt.workspace = true
+superchain-registry.workspace = true
+
+# reth
+reth-primitives = { workspace = true, features = ["optimism"] }
+reth-evm.workspace = true
+reth-evm-optimism.workspace = true
+reth-chainspec.workspace = true
+
+# revm
+revm = { workspace = true, features = ["optimism", "alloydb"] }

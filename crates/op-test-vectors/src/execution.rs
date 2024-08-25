@@ -1,10 +1,8 @@
 //! Module containing the execution test fixture.
 
 use alloy_primitives::{Address, Bloom, B256, U256};
-use alloy_rpc_types::trace::geth::AccountState;
-
-use op_alloy_consensus::OpTypedTransaction;
-use op_alloy_rpc_types::OpTransactionReceipt;
+use op_alloy_consensus::{OpReceiptEnvelope, OpTypedTransaction};
+use revm::primitives::Account;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -17,10 +15,10 @@ pub struct ExecutionFixture {
     pub env: ExecutionEnvironment,
     /// The initial state of the accounts before running the transactions, also called the
     /// "pre-state".
-    pub alloc: HashMap<Address, AccountState>,
+    pub alloc: HashMap<Address, Account>,
     /// The expected state of the accounts after running the transactions, also called the
     /// "post-state".
-    pub out_alloc: HashMap<Address, AccountState>,
+    pub out_alloc: HashMap<Address, Account>,
     /// Transactions to execute.
     #[serde(rename = "txs")]
     pub transactions: Vec<OpTypedTransaction>,
@@ -64,7 +62,7 @@ pub struct ExecutionResult {
     /// The logs bloom.
     pub logs_bloom: Bloom,
     /// A list of execution receipts for each executed transaction.
-    pub receipts: Vec<OpTransactionReceipt>,
+    pub receipts: Vec<OpReceiptEnvelope>,
 }
 
 #[cfg(test)]

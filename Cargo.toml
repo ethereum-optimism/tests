@@ -30,24 +30,25 @@ hashbrown = "0.14.5"
 # Alloy Dependencies
 op-alloy-rpc-types = "0.1.4"
 op-alloy-consensus = "0.1.4"
+op-alloy-network = "0.1.5"
+alloy-rlp = { version = "0.3.8" }
 alloy-primitives = { version = "0.7" }
 alloy-consensus = { version = "0.2" }
 alloy-eips = { version = "0.2" }
 alloy-rpc-types = { version = "0.2" }
 
-# Foundry Dependencies
-foundry-common = { git = "https://github.com/foundry-rs/foundry", default-features = true, rev = "c600237f3e54604274bfdcba627f347493fd21d2" }
-foundry-compilers = { git = "https://github.com/foundry-rs/foundry", default-features = true, rev = "c600237f3e54604274bfdcba627f347493fd21d2" }
-anvil = { git = "https://github.com/foundry-rs/foundry", default-features = true, rev = "c600237f3e54604274bfdcba627f347493fd21d2" }
-anvil-core = { git = "https://github.com/foundry-rs/foundry", default-features = true, rev = "c600237f3e54604274bfdcba627f347493fd21d2" }
-cast = { git = "https://github.com/foundry-rs/foundry", rev = "c600237f3e54604274bfdcba627f347493fd21d2" }
-forge-script = { git = "https://github.com/foundry-rs/foundry", rev = "c600237f3e54604274bfdcba627f347493fd21d2" }
-revm = { version = "12.1", features = ["alloydb", "optimism"] }
+# revm + reth
+revm = { version = "13.0", features = ["optimism", "serde"] }
+reth-primitives = { git = "https://github.com/paradigmxyz/reth", tag = "v1.0.5" }
+reth-evm = { git = "https://github.com/paradigmxyz/reth", tag = "v1.0.5" }
+reth-evm-optimism = { git = "https://github.com/paradigmxyz/reth", tag = "v1.0.5", features = ["optimism"] }
+reth-chainspec = { git = "https://github.com/paradigmxyz/reth", tag = "v1.0.5", features = ["optimism"] }
 
 # Kona + OP Types
 superchain-registry = "0.2.6"
-kona-primitives = { git = "https://github.com/ethereum-optimism/kona", version = "0.0.2", features = ["online"] }
-kona-derive = { git = "https://github.com/ethereum-optimism/kona", version = "0.0.3", features = ["online"] }
+kona-primitives = { git = "https://github.com/ethereum-optimism/kona", version = "0.0.1", features = ["online"] }
+kona-derive = { git = "https://github.com/ethereum-optimism/kona", version = "0.0.2", features = ["online"] }
+kona-mpt = { git = "https://github.com/ethereum-optimism/kona", version = "0.0.2" }
 
 # Internal
 op-test-vectors = { path = "crates/op-test-vectors" }
