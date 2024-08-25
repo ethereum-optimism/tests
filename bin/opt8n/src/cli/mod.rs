@@ -3,8 +3,8 @@
 use alloy_primitives::Address;
 use clap::{ArgAction, Parser};
 use color_eyre::eyre::{eyre, Result};
-use t8n::T8n;
 use std::path::PathBuf;
+use t8n::T8n;
 use tokio::sync::broadcast::{self};
 use tracing::Level;
 

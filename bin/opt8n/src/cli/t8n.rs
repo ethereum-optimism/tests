@@ -1,7 +1,7 @@
 //! The `opt8n` application.
 
 use super::{deposits::DepositCapture, state::StateCapture, Cli};
-use crate::generator::STF;
+use crate::generator::StateTransition;
 use alloy_genesis::Genesis;
 use alloy_primitives::Bytes;
 use color_eyre::{eyre::ensure, owo_colors::OwoColorize, Result};
@@ -32,8 +32,8 @@ impl<'a> T8n<'a> {
         Self {
             cli,
             interrupt: interrupt.clone(),
-            state_cfg: StateCapture::new(&cli),
-            deposits: DepositCapture::new(&cli, interrupt),
+            state_cfg: StateCapture::new(cli),
+            deposits: DepositCapture::new(cli, interrupt),
             transactions: Default::default(),
         }
     }
@@ -85,7 +85,7 @@ impl<'a> T8n<'a> {
                     let genesis: Genesis =
                         serde_json::from_slice(&std::fs::read(&self.cli.l2_genesis)?)?;
 
-                    let mut stf = STF::new(genesis, self.state_cfg.allocs.clone())?;
+                    let mut stf = StateTransition::new(genesis, self.state_cfg.allocs.clone())?;
 
                     // Sanity check that the pre-state root is correct before proceeding.
                     ensure!(

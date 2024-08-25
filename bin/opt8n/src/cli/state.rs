@@ -93,7 +93,7 @@ impl<'a> StateCapture<'a> {
         };
 
         let l1_info_tx = transactions
-            .get(0)
+            .first()
             .ok_or(eyre!("L1 info transaction not present"))?;
         let raw_tx = l2_provider
             .raw_request::<[B256; 1], Bytes>("debug_getRawTransaction".into(), [*l1_info_tx])

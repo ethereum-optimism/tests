@@ -25,18 +25,18 @@ use revm::{
 use std::{collections::BTreeMap, sync::Arc};
 use tracing::info;
 
-/// The database for [STF].
-type STFDB = CacheDB<EmptyDBTyped<ProviderError>>;
+/// The database for [StateTransition].
+type StfDb = CacheDB<EmptyDBTyped<ProviderError>>;
 
 /// The execution fixture generator for `opt8n`.
-pub(crate) struct STF {
+pub(crate) struct StateTransition {
     /// Inner cache database.
-    pub(crate) db: STFDB,
+    pub(crate) db: StfDb,
     /// The [ChainSpec] for the devnet chain.
     pub(crate) chain_spec: Arc<ChainSpec>,
 }
 
-impl STF {
+impl StateTransition {
     /// Create a new execution fixture generator.
     pub(crate) fn new(genesis: Genesis, state_dump: DumpBlockResponse) -> Result<Self> {
         let mut db = CacheDB::default();
@@ -59,7 +59,7 @@ impl STF {
                         .storage
                         .as_ref()
                         .unwrap_or(&BTreeMap::new())
-                        .into_iter()
+                        .iter()
                         .map(|(k, v)| ((*k).into(), (*v).into()))
                         .collect(),
                     account_state: AccountState::None,
@@ -79,11 +79,7 @@ impl STF {
             };
             db.insert_contract(&mut info);
 
-            let entry = db
-                .accounts
-                .entry(*k)
-                .or_insert_with(|| DbAccount::default());
-
+            let entry = db.accounts.entry(*k).or_default();
             entry.info = info;
             if let Some(storage) = &account.storage {
                 storage.iter().for_each(|(k, v)| {
@@ -99,7 +95,7 @@ impl STF {
     }
 
     /// Grab the block executor with the current state.
-    pub(crate) fn executor(&mut self) -> OpBlockExecutor<OptimismEvmConfig, STFDB> {
+    pub(crate) fn executor(&mut self) -> OpBlockExecutor<OptimismEvmConfig, StfDb> {
         // Construct an ephemeral state with the current database.
         let state = State::builder()
             .with_database(self.db.clone())
@@ -178,11 +174,7 @@ impl STF {
             let mut info = account.info.clone().unwrap_or_default();
             self.db.insert_contract(&mut info);
 
-            let db_account = self
-                .db
-                .accounts
-                .entry(*address)
-                .or_insert_with(|| DbAccount::default());
+            let db_account = self.db.accounts.entry(*address).or_default();
             if account.is_info_changed() {
                 db_account.info = info;
             }
@@ -225,7 +217,12 @@ impl STF {
                 current_number: U256::from(header.number),
                 current_timestamp: U256::from(header.timestamp),
                 parent_beacon_block_root: header.parent_beacon_block_root,
-                block_hashes: Default::default(),
+                block_hashes: Some(
+                    [(U256::from(header.number - 1), header.parent_hash)]
+                        .iter()
+                        .cloned()
+                        .collect::<HashMap<_, _>>(),
+                ),
             },
             transactions: encoded_txs,
             result: ExecutionResult {
@@ -281,11 +278,10 @@ impl STF {
                     .code
                     .as_ref()
                     .map(|code| match code {
-                        Bytecode::LegacyRaw(code) => Some(keccak256(code)),
-                        Bytecode::LegacyAnalyzed(code) => Some(keccak256(code.bytecode())),
+                        Bytecode::LegacyRaw(code) => keccak256(code),
+                        Bytecode::LegacyAnalyzed(code) => keccak256(code.bytecode()),
                         _ => panic!("Unsupported bytecode type"),
                     })
-                    .flatten()
                     .unwrap_or(KECCAK_EMPTY),
             };
 
@@ -313,8 +309,8 @@ impl STF {
         Ok(hb.root())
     }
 
-    /// Transforms a [STFDB] into a map of [Address]es to [GenesisAccount]s.
-    fn gen_allocs(db: STFDB) -> HashMap<Address, GenesisAccount> {
+    /// Transforms a [StfDb] into a map of [Address]es to [GenesisAccount]s.
+    fn gen_allocs(db: StfDb) -> HashMap<Address, GenesisAccount> {
         db.accounts
             .iter()
             .map(|(address, account)| {
