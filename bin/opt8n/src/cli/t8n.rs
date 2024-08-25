@@ -1,12 +1,15 @@
 //! The `opt8n` application.
 
-use super::{deposits::DepositCapture, l1_info::L1InfoConfigurator, state::StateCapture, Cli};
+use super::{deposits::DepositCapture, state::StateCapture, Cli};
+use crate::generator::STF;
+use alloy_genesis::Genesis;
 use alloy_primitives::Bytes;
+use color_eyre::{eyre::ensure, Result, owo_colors::OwoColorize};
 use futures::{future::BoxFuture, FutureExt};
 use inquire::Select;
-use std::fmt::Display;
+use std::{fmt::Display, path::PathBuf};
 use tokio::sync::broadcast::Sender;
-use color_eyre::Result;
+use tracing::info;
 
 /// The `opt8n` application
 #[derive(Debug)]
@@ -17,8 +20,6 @@ pub(crate) struct T8n<'a> {
     pub(crate) interrupt: Sender<()>,
     /// The prestate configurator for `opt8n`
     pub(crate) state_cfg: StateCapture<'a>,
-    /// The L1 info system transaction.
-    pub(crate) l1_info: L1InfoConfigurator,
     /// The RLP encoded deposit transactions to send in the test.
     pub(crate) deposits: DepositCapture<'a>,
     /// The RLP encoded transactions to send in the test.
@@ -32,7 +33,6 @@ impl<'a> T8n<'a> {
             cli,
             interrupt: interrupt.clone(),
             state_cfg: StateCapture::new(&cli),
-            l1_info: Default::default(),
             deposits: DepositCapture::new(&cli, interrupt),
             transactions: Default::default(),
         }
@@ -43,7 +43,6 @@ impl<'a> T8n<'a> {
         async move {
             let options = [
                 MainMenuOption::SetupEnvironment,
-                MainMenuOption::ModifyL1Info,
                 MainMenuOption::CaptureDeposits,
                 MainMenuOption::ModifyBlock,
                 MainMenuOption::GenerateFixture,
@@ -54,15 +53,8 @@ impl<'a> T8n<'a> {
             match choice {
                 MainMenuOption::SetupEnvironment => {
                     // Capture prestate and test block environment.
-                    let l1_info = self.state_cfg.capture_state().await?;
-                    self.l1_info.tx = l1_info;
-
-                    // Return to the main menu.
-                    self.run().await?;
-                }
-                MainMenuOption::ModifyL1Info => {
-                    // Show the L1 info configuration menu.
-                    self.l1_info.show_configuration_menu()?;
+                    let (_, l1_info_encoded) = self.state_cfg.capture_state().await?;
+                    self.deposits.transactions.push(l1_info_encoded);
 
                     // Return to the main menu.
                     self.run().await?;
@@ -90,26 +82,38 @@ impl<'a> T8n<'a> {
                     self.run().await?;
                 }
                 MainMenuOption::GenerateFixture => {
-                    dbg!(&self.state_cfg);
-                    dbg!(&self.l1_info);
-                    dbg!(&self.deposits);
-                    dbg!(&self.transactions);
+                    let genesis: Genesis =
+                        serde_json::from_slice(&std::fs::read(&self.cli.l2_genesis)?)?;
 
-                    // let fixture = ExecutionFixture {
-                    //     env: ExecutionEnvironment {
-                    //         current_coinbase: self.env.coinbase,
-                    //         current_difficulty: self.env.difficulty,
-                    //         current_gas_limit: self.env.gas_limit,
-                    //         previous_hash: todo!(),
-                    //         current_number: self.env.number,
-                    //         current_timestamp: self.env.timestamp,
-                    //         block_hashes: Default::default(), // TODO
-                    //     },
-                    //     alloc: todo!(),
-                    //     out_alloc: todo!(),
-                    //     transactions: todo!(),
-                    //     result: todo!(),
-                    // };
+                    let mut stf = STF::new(genesis, self.state_cfg.allocs.clone())?;
+
+                    // Sanity check that the pre-state root is correct before proceeding.
+                    ensure!(
+                        stf.state_root()? == self.state_cfg.pre_header.state_root,
+                        "Pre-state root mismatch; Fatal error."
+                    );
+
+                    // Chain together all transactions for the test block.
+                    let transactions = self
+                        .deposits
+                        .transactions
+                        .iter()
+                        .chain(&self.transactions)
+                        .cloned()
+                        .collect::<Vec<_>>();
+
+                    // Execute the test block to create the fixture.
+                    let fixture = stf.execute(self.state_cfg.header.clone(), transactions)?;
+
+                    // Write the fixture to disk.
+                    let out_path = self
+                        .cli
+                        .output
+                        .clone()
+                        .unwrap_or_else(|| PathBuf::from("fixture.json"));
+                    std::fs::write(&out_path, serde_json::to_string_pretty(&fixture)?)?;
+
+                    info!(target: "opt8n", "Execution fixture written to disk @ {}.", out_path.display().green());
                 }
                 MainMenuOption::Exit => { /* Fall to exit */ }
             }
@@ -124,7 +128,6 @@ impl<'a> T8n<'a> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum MainMenuOption {
     SetupEnvironment,
-    ModifyL1Info,
     CaptureDeposits,
     ModifyBlock,
     GenerateFixture,
@@ -138,7 +141,6 @@ impl Display for MainMenuOption {
                 f,
                 "Setup environment (capture prestate and test block environment)"
             ),
-            Self::ModifyL1Info => write!(f, "Modify L1 information system transaction"),
             Self::CaptureDeposits => write!(f, "Set deposit transactions"),
             Self::ModifyBlock => write!(f, "Set user-space transactions"),
             Self::GenerateFixture => write!(f, "Generate execution fixture"),

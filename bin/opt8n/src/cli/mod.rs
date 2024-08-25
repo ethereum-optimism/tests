@@ -8,10 +8,9 @@ use std::path::PathBuf;
 use tokio::sync::broadcast::{self};
 use tracing::Level;
 
-mod deposits;
-mod l1_info;
-mod state;
-mod t8n;
+pub(crate) mod deposits;
+pub(crate) mod state;
+pub(crate) mod t8n;
 
 /// The root CLI for `opt8n`
 #[derive(Parser, Clone, Debug, Default, Eq, PartialEq)]
@@ -25,6 +24,9 @@ pub(crate) struct Cli {
     /// The port of the L2 execution layer node.
     #[arg(long)]
     pub(crate) l2_port: u16,
+    /// The path to the L2 genesis file.
+    #[arg(long)]
+    pub(crate) l2_genesis: PathBuf,
     /// The address of the OptimismPortal contract on the L1 chain.
     #[arg(long, short)]
     pub(crate) optimism_portal_address: Address,

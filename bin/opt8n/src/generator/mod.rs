@@ -1,61 +1,130 @@
-//! The [ExecutionFixture] generator for `opt8n`.
+//! The reference state transition function.
 
-use alloy_consensus::Header;
+use alloy_consensus::{constants::KECCAK_EMPTY, Header};
+use alloy_genesis::{Genesis, GenesisAccount};
 use alloy_primitives::B256;
-use alloy_rlp::Decodable;
+use alloy_rlp::{Decodable, Encodable};
+use alloy_trie::{HashBuilder, HashMap, Nibbles};
 use color_eyre::{eyre::eyre, Result};
-use reth_chainspec::OP_MAINNET;
-use reth_evm::execute::{BlockExecutionInput, BlockExecutionOutput, Executor, ProviderError};
+use itertools::Itertools;
+use kona_mpt::TrieAccount;
+use op_test_vectors::execution::{ExecutionEnvironment, ExecutionFixture, ExecutionResult};
+use reth_chainspec::ChainSpec;
+use reth_evm::execute::{
+    BlockExecutionInput, BlockExecutionOutput, ExecutionOutcome, Executor, ProviderError,
+};
 use reth_evm_optimism::{OpBlockExecutor, OptimismEvmConfig};
-use reth_primitives::{Block, BlockWithSenders, Bytes, TransactionSigned, U256};
-use revm::db::{CacheDB, DbAccount, EmptyDBTyped, State};
+use reth_primitives::{
+    keccak256, Address, Block, BlockWithSenders, Bytes, TransactionSigned, U256,
+};
+use revm::{
+    db::{AccountState, CacheDB, DbAccount, EmptyDBTyped, State},
+    primitives::{AccountInfo, Bytecode},
+};
+use std::{collections::BTreeMap, sync::Arc};
+
+use crate::cli::state::{DumpBlockResponse, GenesisAccountExt};
 
 /// The database for [STF].
 type STFDB = CacheDB<EmptyDBTyped<ProviderError>>;
 
 /// The execution fixture generator for `opt8n`.
 pub(crate) struct STF {
+    /// Inner cache database.
     pub(crate) db: STFDB,
+    /// The [ChainSpec] for the devnet chain.
+    pub(crate) chain_spec: Arc<ChainSpec>,
 }
 
 impl STF {
     /// Create a new execution fixture generator.
-    pub(crate) fn new(db: STFDB) -> Self {
-        Self { db }
+    pub(crate) fn new(genesis: Genesis, state_dump: DumpBlockResponse) -> Result<Self> {
+        let mut db = CacheDB::default();
+
+        // Insert the genesis allocs
+        genesis.alloc.iter().for_each(|(k, v)| {
+            let mut info = AccountInfo {
+                nonce: v.nonce.unwrap_or_default(),
+                balance: v.balance,
+                code: v.code.clone().map(Bytecode::new_raw),
+                code_hash: KECCAK_EMPTY,
+            };
+
+            db.insert_contract(&mut info);
+            db.accounts.insert(
+                *k,
+                DbAccount {
+                    info: info.clone(),
+                    storage: v
+                        .storage
+                        .as_ref()
+                        .unwrap_or(&BTreeMap::new())
+                        .into_iter()
+                        .map(|(k, v)| ((*k).into(), (*v).into()))
+                        .collect(),
+                    account_state: AccountState::None,
+                },
+            );
+        });
+
+        // Overlay the state dump on top of the genesis allocs.
+        state_dump.accounts.iter().for_each(|(k, v)| {
+            let GenesisAccountExt { account, .. } = v;
+
+            let mut info = AccountInfo {
+                nonce: account.nonce.unwrap_or_default(),
+                balance: account.balance,
+                code: account.code.clone().map(Bytecode::new_raw),
+                code_hash: KECCAK_EMPTY,
+            };
+            db.insert_contract(&mut info);
+
+            let entry = db
+                .accounts
+                .entry(*k)
+                .or_insert_with(|| DbAccount::default());
+
+            entry.info = info;
+            if let Some(storage) = &account.storage {
+                storage.iter().for_each(|(k, v)| {
+                    entry.storage.insert((*k).into(), (*v).into());
+                });
+            }
+        });
+
+        Ok(Self {
+            db,
+            chain_spec: Arc::new(ChainSpec::from(genesis)),
+        })
     }
 
     /// Grab the block executor with the current state.
-    pub(crate) fn executor(&mut self) -> OpBlockExecutor<OptimismEvmConfig, &mut STFDB> {
+    pub(crate) fn executor(&mut self) -> OpBlockExecutor<OptimismEvmConfig, STFDB> {
+        // Construct an ephemeral state with the current database.
         let state = State::builder()
-            .with_database(&mut self.db)
+            .with_database(self.db.clone())
             .with_bundle_update()
             .build();
 
         // TODO: Custom EVMConfig
-        OpBlockExecutor::new(OP_MAINNET.clone(), OptimismEvmConfig::default(), state)
+        OpBlockExecutor::new(self.chain_spec.clone(), OptimismEvmConfig::default(), state)
     }
 
-    pub(crate) fn execute(&mut self, header: Header, transactions: Vec<Bytes>) -> Result<()> {
-        let mut executor = self.executor();
+    pub(crate) fn execute(
+        &mut self,
+        header: Header,
+        encoded_txs: Vec<Bytes>,
+    ) -> Result<ExecutionFixture> {
+        let executor = self.executor();
 
-        // header fields that matter:
-        // block_env.number = U256::from(header.number);
-        // block_env.coinbase = header.beneficiary;
-        // block_env.timestamp = U256::from(header.timestamp);
-        // if after_merge {
-        //     block_env.prevrandao = Some(header.mix_hash);
-        //     block_env.difficulty = U256::ZERO;
-        // } else {
-        //     block_env.difficulty = header.difficulty;
-        //     block_env.prevrandao = None;
-        // }
-        // block_env.basefee = U256::from(header.base_fee_per_gas.unwrap_or_default());
-        // block_env.gas_limit = U256::from(header.gas_limit);
-        //
-        // // EIP-4844 excess blob gas of this block, introduced in Cancun
-        // if let Some(excess_blob_gas) = header.excess_blob_gas {
-        //     block_env.set_blob_excess_gas_and_price(excess_blob_gas);
-        // }
+        let txs = encoded_txs
+            .iter()
+            .cloned()
+            .map(|tx| {
+                TransactionSigned::decode(&mut tx.as_ref())
+                    .map_err(|e| eyre!("Error decoding transaction: {e}"))
+            })
+            .collect::<Result<Vec<TransactionSigned>>>()?;
         let block = Block {
             header: reth_primitives::Header {
                 parent_hash: header.parent_hash,
@@ -80,13 +149,7 @@ impl STF {
                 requests_root: header.requests_root,
                 extra_data: header.extra_data,
             },
-            body: transactions
-                .into_iter()
-                .map(|tx| {
-                    TransactionSigned::decode(&mut tx.as_ref())
-                        .map_err(|e| eyre!("Error decoding transaction: {e}"))
-                })
-                .collect::<Result<Vec<TransactionSigned>>>()?,
+            body: txs.clone(),
             ..Default::default()
         };
         let senders = block
@@ -98,39 +161,174 @@ impl STF {
         // Execute the block.
         let block_with_senders = BlockWithSenders::new(block, senders)
             .ok_or(eyre!("Error creating block with senders"))?;
-        let execution_input = BlockExecutionInput::new(&block_with_senders, U256::ZERO);
+        let execution_input = BlockExecutionInput::new(&block_with_senders, header.difficulty);
         let BlockExecutionOutput {
-            state,
-            receipts,
-            gas_used,
-            ..
+            state, receipts, ..
         } = executor.execute(execution_input)?;
 
         // Flush the bundle state updates to the in-memory database.
-        for (address, account) in state.state {
-            let mut info = account.info.unwrap_or_default();
+        let alloc_db = self.db.clone();
+        for (address, account) in &state.state {
+            if account.status.is_not_modified() {
+                continue;
+            }
+
+            let mut info = account.info.clone().unwrap_or_default();
             self.db.insert_contract(&mut info);
-            self.db.accounts.insert(
-                address,
-                DbAccount {
-                    info,
-                    storage: account
-                        .storage
-                        .iter()
-                        .map(|(k, v)| (*k, v.present_value))
-                        .collect(),
-                    ..Default::default()
-                },
+
+            let db_account = self
+                .db
+                .accounts
+                .entry(*address)
+                .or_insert_with(|| DbAccount::default());
+            if account.is_info_changed() {
+                db_account.info = info;
+            }
+
+            // Insert all storage slots into the account storage trie.
+            db_account.storage.extend(
+                account
+                    .storage
+                    .iter()
+                    .map(|(k, v)| (*k, v.present_value))
+                    .collect::<HashMap<U256, U256>>(),
             );
         }
 
-        // Compute the state root
+        // Compute the execution fixture results.
+        let root = self.state_root()?;
+        let execution_outcome =
+            ExecutionOutcome::new(state, receipts.clone().into(), header.number, Vec::new());
+        let receipts_root = execution_outcome
+            .optimism_receipts_root_slow(header.number, self.chain_spec.as_ref(), header.timestamp)
+            .expect("Number is in range");
+        let logs_bloom = execution_outcome
+            .block_logs_bloom(header.number)
+            .expect("Number is in range");
+        let transactions_root = reth_primitives::proofs::calculate_transaction_root(&txs);
 
-        Ok(())
+        Ok(ExecutionFixture {
+            env: ExecutionEnvironment {
+                current_coinbase: header.beneficiary,
+                current_difficulty: header.mix_hash.into(),
+                current_gas_limit: U256::from(header.gas_limit),
+                previous_hash: header.parent_hash,
+                current_number: U256::from(header.number),
+                current_timestamp: U256::from(header.timestamp),
+                parent_beacon_block_root: header.parent_beacon_block_root,
+                block_hashes: Default::default(),
+            },
+            transactions: encoded_txs,
+            result: ExecutionResult {
+                state_root: root,
+                tx_root: transactions_root,
+                receipt_root: receipts_root,
+                logs_bloom,
+                receipts: receipts
+                    .iter()
+                    .map(|r| {
+                        let mut buf = Vec::with_capacity(r.length());
+                        r.encode(&mut buf);
+                        buf.into()
+                    })
+                    .collect::<Vec<_>>(),
+            },
+            alloc: Self::gen_allocs(alloc_db),
+        })
     }
 
     /// Computes the state root from the data available in [Self::db].
-    pub(crate) fn state_root(&self) -> B256 {
-        todo!()
+    pub(crate) fn state_root(&self) -> Result<B256> {
+        // First, generate all account tries.
+        let mut trie_accounts = HashMap::new();
+        for (address, account_state) in self.db.accounts.iter() {
+            let mut hb = HashBuilder::default();
+
+            // Sort the storage by the hash of the slot, and filter out any storage slots with zero values.
+            let sorted_storage = account_state
+                .storage
+                .iter()
+                .filter(|(_, v)| **v != U256::ZERO)
+                .sorted_by_key(|(k, _)| keccak256(k.to_be_bytes::<32>()));
+
+            // Insert all non-zero storage slots into the account storage trie, in-order.
+            for (slot, value) in sorted_storage {
+                let slot_nibbles = Nibbles::unpack(keccak256(slot.to_be_bytes::<32>()));
+                let mut value_buf = Vec::with_capacity(value.length());
+                value.encode(&mut value_buf);
+                hb.add_leaf(slot_nibbles, &value_buf);
+            }
+
+            // Compute the root of the account storage trie.
+            let storage_root = hb.root();
+
+            // Construct the trie account.
+            let trie_account = TrieAccount {
+                nonce: account_state.info.nonce,
+                balance: account_state.info.balance,
+                storage_root,
+                code_hash: account_state
+                    .info
+                    .code
+                    .as_ref()
+                    .map(|code| match code {
+                        Bytecode::LegacyRaw(code) => Some(keccak256(code)),
+                        Bytecode::LegacyAnalyzed(code) => Some(keccak256(code.bytecode())),
+                        _ => panic!("Unsupported bytecode type"),
+                    })
+                    .flatten()
+                    .unwrap_or(KECCAK_EMPTY),
+            };
+
+            trie_accounts.insert(address, trie_account);
+        }
+
+        let mut hb = HashBuilder::default();
+
+        // Sort the accounts by the hash of the address.
+        let sorted_accounts = trie_accounts.iter().sorted_by_key(|(k, _)| keccak256(k));
+
+        // Insert all accounts into the state trie, in-order.
+        for (address, _) in sorted_accounts {
+            let trie_account = trie_accounts
+                .get(address)
+                .ok_or(eyre!("Missing trie account"))?;
+
+            let address_nibbles = Nibbles::unpack(keccak256(address));
+            let mut account_buffer = Vec::with_capacity(trie_account.length());
+            trie_account.encode(&mut account_buffer);
+
+            hb.add_leaf(address_nibbles, &account_buffer);
+        }
+
+        Ok(hb.root())
+    }
+
+    /// Transforms a [STFDB] into a map of [Address]es to [GenesisAccount]s.
+    fn gen_allocs(db: STFDB) -> HashMap<Address, GenesisAccount> {
+        db.accounts
+            .iter()
+            .map(|(address, account)| {
+                let mut storage = BTreeMap::new();
+                for (slot, value) in &account.storage {
+                    storage.insert((*slot).into(), (*value).into());
+                }
+
+                (
+                    *address,
+                    GenesisAccount {
+                        balance: account.info.balance,
+                        nonce: Some(account.info.nonce),
+                        code: account.info.code.as_ref().map(|code| match code {
+                            Bytecode::LegacyRaw(code) => code.clone(),
+                            Bytecode::LegacyAnalyzed(code) => code.bytecode().clone(),
+                            _ => panic!("Unsupported bytecode type"),
+                        }),
+                        storage: Some(storage),
+                        private_key: None,
+                    },
+                )
+            })
+            .collect()
     }
 }

@@ -91,7 +91,7 @@ impl<'a> DepositCapture<'a> {
             self.cli.optimism_portal_address,
         )?;
 
-        self.transactions = deposits;
+        self.transactions.extend(deposits);
         Ok(())
     }
 

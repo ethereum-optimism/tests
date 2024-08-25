@@ -2471,12 +2471,12 @@ name = "op-test-vectors"
 version = "0.2.0"
 dependencies = [
  "alloy-consensus",
+ "alloy-genesis",
  "alloy-primitives",
  "color-eyre",
  "hashbrown 0.14.5",
  "kona-primitives",
  "op-alloy-consensus",
- "revm",
  "serde",
  "serde_json",
 ]
@@ -2554,11 +2554,13 @@ version = "0.2.0"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
+ "alloy-genesis",
  "alloy-primitives",
  "alloy-provider",
  "alloy-rlp",
  "alloy-transport",
  "alloy-transport-http",
+ "alloy-trie",
  "axum",
  "clap",
  "color-eyre",
@@ -2566,6 +2568,7 @@ dependencies = [
  "futures",
  "hashbrown 0.14.5",
  "inquire",
+ "itertools 0.13.0",
  "kona-mpt",
  "kona-primitives",
  "op-alloy-consensus",

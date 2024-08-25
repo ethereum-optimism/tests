@@ -36,6 +36,7 @@ alloy-primitives = { version = "0.7" }
 alloy-consensus = { version = "0.2" }
 alloy-eips = { version = "0.2" }
 alloy-rpc-types = { version = "0.2" }
+alloy-genesis = "0.2"
 
 # revm + reth
 revm = { version = "13.0", features = ["optimism", "serde"] }

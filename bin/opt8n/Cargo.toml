@@ -19,7 +19,7 @@ reqwest.workspace = true
 futures.workspace = true
 color-eyre.workspace = true
 tracing-subscriber.workspace = true
-
+itertools = "0.13"
 # CLI
 clap.workspace = true
 inquire = { version = "0.7.5", features = ["editor"] }
@@ -34,6 +34,8 @@ alloy-eips.workspace = true
 alloy-transport = "0.2"
 alloy-provider = "0.2"
 alloy-transport-http = "0.2"
+alloy-trie = "0.4.1"
+alloy-genesis.workspace = true
 op-alloy-consensus.workspace = true
 op-alloy-network.workspace = true
 

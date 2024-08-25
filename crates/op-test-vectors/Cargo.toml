@@ -18,12 +18,10 @@ hashbrown.workspace = true
 # Alloy
 alloy-primitives.workspace = true
 alloy-consensus.workspace = true
+alloy-genesis.workspace = true
 
 # OP Types
 op-alloy-consensus.workspace = true
-
-# revm
-revm.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true

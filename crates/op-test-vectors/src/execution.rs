@@ -1,8 +1,7 @@
 //! Module containing the execution test fixture.
 
-use alloy_primitives::{Address, Bloom, B256, U256};
-use op_alloy_consensus::{OpReceiptEnvelope, OpTypedTransaction};
-use revm::primitives::Account;
+use alloy_genesis::GenesisAccount;
+use alloy_primitives::{Address, Bloom, Bytes, B256, U256};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -15,13 +14,10 @@ pub struct ExecutionFixture {
     pub env: ExecutionEnvironment,
     /// The initial state of the accounts before running the transactions, also called the
     /// "pre-state".
-    pub alloc: HashMap<Address, Account>,
-    /// The expected state of the accounts after running the transactions, also called the
-    /// "post-state".
-    pub out_alloc: HashMap<Address, Account>,
+    pub alloc: HashMap<Address, GenesisAccount>,
     /// Transactions to execute.
     #[serde(rename = "txs")]
-    pub transactions: Vec<OpTypedTransaction>,
+    pub transactions: Vec<Bytes>,
     /// The expected result after executing transactions.
     pub result: ExecutionResult,
 }
@@ -43,6 +39,9 @@ pub struct ExecutionEnvironment {
     pub current_number: U256,
     /// The current block timestamp.
     pub current_timestamp: U256,
+    /// The current parent beacon block root.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parent_beacon_block_root: Option<B256>,
     /// The block hashes of the previous blocks.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub block_hashes: Option<HashMap<U256, B256>>,
@@ -62,7 +61,7 @@ pub struct ExecutionResult {
     /// The logs bloom.
     pub logs_bloom: Bloom,
     /// A list of execution receipts for each executed transaction.
-    pub receipts: Vec<OpReceiptEnvelope>,
+    pub receipts: Vec<Bytes>,
 }
 
 #[cfg(test)]
