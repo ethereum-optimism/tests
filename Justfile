@@ -106,7 +106,7 @@ stop-devnet:
   kurtosis clean -a
 
 # Run t8n
-t8n *args='': install-devnet start-devnet
+t8n fixture_name='fixture': install-devnet start-devnet
   #!/bin/bash
 
   SCRIPT_DIR=$( pwd )
@@ -130,7 +130,12 @@ t8n *args='': install-devnet start-devnet
     --l2-port "$L2_PORT" \
     -o "$OPTIMISM_PORTAL_PROXY" \
     --l2-genesis "$GENESIS" \
-    $@
+    --output "./fixtures/execution/$@.json"
+
+  # Compress the execution fixture
+  echo "Compressing new execution fixture..."
+  tar --zstd -cf ./fixtures/execution/$@.tar.zst ./fixtures/execution/$@.json
+  rm ./fixtures/execution/$@.json
 
   echo "Cleaning up genesis + configs..."
   rm -rf ./op-genesis-configs
