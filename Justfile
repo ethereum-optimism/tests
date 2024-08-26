@@ -130,12 +130,12 @@ t8n fixture_name='fixture': install-devnet start-devnet
     --l2-port "$L2_PORT" \
     -o "$OPTIMISM_PORTAL_PROXY" \
     --l2-genesis "$GENESIS" \
-    --output "./fixtures/execution/$@.json"
+    --output "./$@.json"
 
   # Compress the execution fixture
   echo "Compressing new execution fixture..."
-  tar --zstd -cf ./fixtures/execution/$@.tar.zst ./fixtures/execution/$@.json
-  rm ./fixtures/execution/$@.json
+  gzip "$@.json"
+  mv "$@.json.gz" "./fixtures/execution"
 
   echo "Cleaning up genesis + configs..."
   rm -rf ./op-genesis-configs
