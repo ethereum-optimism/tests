@@ -23,6 +23,8 @@ alloy-genesis.workspace = true
 # OP Types
 op-alloy-consensus.workspace = true
 
+# kona
+kona-primitives.workspace = true
+
 [dev-dependencies]
 serde_json.workspace = true
-kona-primitives.workspace = true

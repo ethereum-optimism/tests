@@ -211,10 +211,16 @@ impl StateTransition {
 
         Ok(ExecutionFixture {
             env: ExecutionEnvironment {
+                genesis: {
+                    let mut genesis = self.chain_spec.genesis.clone();
+                    // strip allocs; they are not needed in the fixture
+                    genesis.alloc.clear();
+                    genesis
+                },
+                previous_header: prev_header,
                 current_coinbase: header.beneficiary,
                 current_difficulty: header.mix_hash.into(),
                 current_gas_limit: U256::from(header.gas_limit),
-                previous_header: prev_header,
                 current_number: U256::from(header.number),
                 current_timestamp: U256::from(header.timestamp),
                 parent_beacon_block_root: header.parent_beacon_block_root,
