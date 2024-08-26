@@ -12,6 +12,7 @@ edition.workspace = true
 [dependencies]
 # Core
 serde.workspace = true
+serde_repr.workspace = true
 color-eyre.workspace = true
 hashbrown.workspace = true
 
@@ -24,6 +25,8 @@ alloy-consensus.workspace = true
 op-alloy-rpc-types.workspace = true
 op-alloy-consensus.workspace = true
 
+# Kona
+kona-primitives.workspace = true
+
 [dev-dependencies]
 serde_json.workspace = true
-kona-primitives.workspace = true

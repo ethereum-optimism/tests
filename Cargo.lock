@@ -4595,6 +4595,7 @@ dependencies = [
  "op-alloy-rpc-types",
  "serde",
  "serde_json",
+ "serde_repr",
 ]
 
 [[package]]

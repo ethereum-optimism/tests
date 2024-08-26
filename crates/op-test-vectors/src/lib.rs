@@ -10,4 +10,6 @@
 
 pub mod derivation;
 
+pub mod faultproof;
+
 pub mod execution;
