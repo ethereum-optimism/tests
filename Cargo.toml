@@ -42,7 +42,7 @@ anvil = { git = "https://github.com/foundry-rs/foundry", default-features = true
 anvil-core = { git = "https://github.com/foundry-rs/foundry", default-features = true, rev = "c600237f3e54604274bfdcba627f347493fd21d2" }
 cast = { git = "https://github.com/foundry-rs/foundry", rev = "c600237f3e54604274bfdcba627f347493fd21d2" }
 forge-script = { git = "https://github.com/foundry-rs/foundry", rev = "c600237f3e54604274bfdcba627f347493fd21d2" }
-revm = { version = "12.1", features = ["alloydb", "optimism"] }
+revm = { version = "13.0", features = ["alloydb", "optimism"] }
 
 # Kona + OP Types
 superchain-registry = "0.2.6"
