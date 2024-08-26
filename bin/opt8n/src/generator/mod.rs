@@ -108,6 +108,7 @@ impl StateTransition {
 
     pub(crate) fn execute(
         &mut self,
+        prev_header: Header,
         header: Header,
         encoded_txs: Vec<Bytes>,
     ) -> Result<ExecutionFixture> {
@@ -213,7 +214,7 @@ impl StateTransition {
                 current_coinbase: header.beneficiary,
                 current_difficulty: header.mix_hash.into(),
                 current_gas_limit: U256::from(header.gas_limit),
-                previous_hash: header.parent_hash,
+                previous_header: prev_header,
                 current_number: U256::from(header.number),
                 current_timestamp: U256::from(header.timestamp),
                 parent_beacon_block_root: header.parent_beacon_block_root,

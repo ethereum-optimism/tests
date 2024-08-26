@@ -1,5 +1,6 @@
 //! Module containing the execution test fixture.
 
+use alloy_consensus::Header;
 use alloy_genesis::GenesisAccount;
 use alloy_primitives::{Address, Bloom, Bytes, B256, U256};
 use serde::{Deserialize, Serialize};
@@ -33,8 +34,8 @@ pub struct ExecutionEnvironment {
     pub current_difficulty: U256,
     /// The current block gas limit.
     pub current_gas_limit: U256,
-    /// The previous block hash.
-    pub previous_hash: B256,
+    /// The previous block header.
+    pub previous_header: Header,
     /// The current block number.
     pub current_number: U256,
     /// The current block timestamp.

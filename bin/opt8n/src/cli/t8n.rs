@@ -103,7 +103,7 @@ impl<'a> T8n<'a> {
                         .collect::<Vec<_>>();
 
                     // Execute the test block to create the fixture.
-                    let fixture = stf.execute(self.state_cfg.header.clone(), transactions)?;
+                    let fixture = stf.execute(self.state_cfg.pre_header.clone(), self.state_cfg.header.clone(), transactions)?;
 
                     // Write the fixture to disk.
                     let out_path = self
