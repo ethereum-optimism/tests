@@ -2,7 +2,7 @@
 
 use alloy_primitives::{BlockHash, BlockNumber, Bytes, B256};
 use hashbrown::HashMap;
-use kona_derive::types::RollupConfig;
+use kona_primitives::RollupConfig;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
@@ -54,9 +54,29 @@ pub enum FaultProofStatus {
     Unknown,
 }
 
+impl TryFrom<u8> for FaultProofStatus {
+        type Error = String;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(FaultProofStatus::Valid),
+            1 => Ok(FaultProofStatus::Invalid),
+            2 => Ok(FaultProofStatus::Panic),
+            3 => Ok(FaultProofStatus::Unfinished),
+            _ => Ok(FaultProofStatus::Unknown),
+        }
+    }
+}
+
+impl From<FaultProofStatus> for u8 {
+    fn from(status: FaultProofStatus) -> u8 {
+        status as u8
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use kona_derive::types::BASE_MAINNET_CONFIG;
+    use kona_primitives::BASE_MAINNET_CONFIG;
 
     use super::*;
 
@@ -112,7 +132,7 @@ mod tests {
                 rollup_config: BASE_MAINNET_CONFIG,
             },
             expected_status: FaultProofStatus::Valid,
-            witness_data: witness_data,
+            witness_data,
         };
 
         let serialized_fixture =

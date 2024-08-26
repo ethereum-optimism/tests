@@ -25,6 +25,8 @@ alloy-consensus.workspace = true
 op-alloy-rpc-types.workspace = true
 op-alloy-consensus.workspace = true
 
+# Kona
+kona-primitives.workspace = true
+
 [dev-dependencies]
 serde_json.workspace = true
-kona-primitives.workspace = true
