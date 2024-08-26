@@ -16,14 +16,15 @@ color-eyre.workspace = true
 hashbrown.workspace = true
 
 # Alloy
-alloy-rpc-types.workspace = true
 alloy-primitives.workspace = true
 alloy-consensus.workspace = true
+alloy-genesis.workspace = true
 
 # OP Types
-op-alloy-rpc-types.workspace = true
 op-alloy-consensus.workspace = true
+
+# kona
+kona-primitives.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true
-kona-primitives.workspace = true

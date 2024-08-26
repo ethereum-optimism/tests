@@ -53,3 +53,89 @@ build *args='':
 # Generates all test fixtures for scripts in examples/exec-scripts
 gen fork_url:
   @just ./examples/exec-scripts/gen {{fork_url}}
+
+# Install the devnet
+install-devnet:
+  #!/bin/bash
+
+  if [ -d "./devnet" ]; then
+    exit 0
+  fi
+
+  git clone https://github.com/ethpandaops/optimism-package && mv optimism-package devnet
+
+  T8N_NETWORK_PARAMS=$(cat <<- "EOM"
+  optimism_package:
+    participants:
+      - el_type: op-geth
+        cl_type: op-node
+    network_params:
+      seconds_per_slot: 2
+      network_id: 1337
+  ethereum_package:
+    participants:
+      - el_type: reth
+        cl_type: lighthouse
+    network_params:
+      preset: minimal
+  EOM
+  )
+  printf "%s" "$T8N_NETWORK_PARAMS" > ./devnet/network_params.yaml
+
+# Start the devnet
+start-devnet:
+  #!/bin/bash
+
+  SCRIPT_DIR=$( pwd )
+  KURTOSIS_DIR="$SCRIPT_DIR/devnet"
+
+  # Exit if Kurtosis is already running
+  kurtosis enclave inspect devnet && exit 0
+
+  echo "Starting Kurtosis network..."
+  cd "$KURTOSIS_DIR" || exit 1
+  kurtosis clean -a
+  kurtosis run --enclave devnet . --args-file ./network_params.yaml
+
+  echo "Returning to opt8n..."
+  cd "$SCRIPT_DIR" || exit 1
+
+# Stop the devnet
+stop-devnet:
+  #!/bin/bash
+  kurtosis clean -a
+
+# Run t8n
+t8n fixture_name='fixture': install-devnet start-devnet
+  #!/bin/bash
+
+  SCRIPT_DIR=$( pwd )
+  T8N_PATH="$SCRIPT_DIR/target/release/opt8n"
+
+  echo "Building opt8n..."
+  cargo build --bin opt8n --release
+
+  # Download L2 genesis configs and contract addresses
+  echo "Downloading L2 genesis configs and contract addresses from devnet..."
+  kurtosis files download devnet op-genesis-configs
+
+  OPTIMISM_PORTAL_PROXY=$(jq -r .OptimismPortalProxy ./op-genesis-configs/kurtosis.json)
+  GENESIS="./op-genesis-configs/genesis.json"
+
+  L1_PORT=$(kurtosis enclave inspect devnet | grep 'el-1-reth-lighthouse' -A5 | grep " rpc:" | awk -F ' -> ' '{print $2}' | awk -F ':' '{print $2}' | tr -d ' \n\r')
+  L2_PORT=$(kurtosis enclave inspect devnet | grep 'op-el-1-op-geth-op-node' -A5 | grep " rpc:" | awk -F ' -> ' '{print $2}' | awk -F ':' '{print $3}' | tr -d ' \n\r')
+
+  $T8N_PATH \
+    --l1-port "$L1_PORT" \
+    --l2-port "$L2_PORT" \
+    -o "$OPTIMISM_PORTAL_PROXY" \
+    --l2-genesis "$GENESIS" \
+    --output "./$@.json"
+
+  # Compress the execution fixture
+  echo "Compressing new execution fixture..."
+  gzip "$@.json"
+  mv "$@.json.gz" "./fixtures/execution"
+
+  echo "Cleaning up genesis + configs..."
+  rm -rf ./op-genesis-configs
